@@ -28,4 +28,5 @@ const lines = input.split("\n").filter((line) => {
   }
   return true;
 });
+
 console.log(lines.length);

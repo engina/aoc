@@ -1,6 +1,7 @@
 // physics.worker.ts
 import * as Cannon from 'cannon-es';
 import { ParseResult } from '../../25/parse';
+import { combinations } from '../../../lib';
 
 let world: Cannon.World;
 let bodies: Cannon.Body[] = [];
@@ -62,17 +63,82 @@ self.onmessage = (e: MessageEvent) => {
         return { body, node };
       });
 
+      const connections = Object.values(msg.data.connDict);
+      const springs = connections.map((connection) => {
+        const a = nodeBodies.find((nb) => nb.node.id === connection.a.id);
+        const b = nodeBodies.find((nb) => nb.node.id === connection.b.id);
+        if (!a || !b) throw new Error('Node not found');
+
+        const spring = new Cannon.Spring(a.body, b.body, {
+          restLength: 1,
+          stiffness: 0.1,
+          damping: 0.01,
+        });
+        return { spring, connection };
+      });
+
+      world.addEventListener('postStep', () => {
+        // return;
+        springs.forEach((s) => {
+          s.spring.applyForce();
+        });
+
+        // calculate repulsive forces between all particles
+        // console.log('rep calc');
+        for (const comb of combinations(nodeBodies, 2)) {
+          const { body: a, node: na } = comb[0];
+          const { body: b, node: nb } = comb[1];
+
+          // Calculate the repulsive (magnetic-like) force
+          const distanceVec = new Cannon.Vec3();
+          b.position.vsub(a.position, distanceVec);
+          const distance = distanceVec.length();
+          // console.log(
+          //   'repulsive',
+          //   na.id,
+          //   nb.id,
+          //   distance,
+          //   distanceVec,
+          //   a.position,
+          //   b.position
+          // );
+
+          const FORCE = 10;
+          if (distance > 0) {
+            const forceMagnitude = FORCE / (distance * distance); // Inverse-square law
+            const force = distanceVec.unit().scale(forceMagnitude); // Normalize and scale
+            // console.log('force', force);
+            a.applyForce(force.negate(), a.position);
+            b.applyForce(force, b.position);
+          } else {
+            // repel with max force on random direction
+            const force = new Cannon.Vec3(
+              Math.random() - 0.5,
+              Math.random() - 0.5,
+              Math.random() - 0.5
+            )
+              .unit()
+              .scale(FORCE);
+            a.applyForce(force, a.position);
+            b.applyForce(force.negate(), b.position);
+          }
+        }
+      });
       self.postMessage({ id: msg.id, type: 'init', status: 'ok' } as PhysicsResponse);
       // Set initial world config
       break;
 
     case 'step':
-      world.step(1 / 60);
+      const started = performance.now();
+      world.fixedStep();
+      const elapsed = performance.now() - started;
+      console.log('Step elapsed', elapsed);
       // Send updated positions back to main thread
       self.postMessage({
         id: msg.id,
+        status: 'ok',
         type: 'positions',
-        positions: bodies.map((body) => body.position),
+        positions: world.bodies.map((body) => body.position),
       } as PhysicsResponse);
       break;
   }

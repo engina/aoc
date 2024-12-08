@@ -23,11 +23,14 @@ const physicsWorker = new Worker(new URL('./physics.worker.ts?worker', import.me
   type: 'module',
 });
 
-const requests = new Map<number, [ResolveFn, rejectfn]>();
+const requests = new Map<
+  number,
+  [(r: PhysicsResponse) => void, (r: PhysicsResponse) => void]
+>();
 
 physicsWorker.onmessage = (e: MessageEvent) => {
   const msg = e.data as PhysicsResponse;
-  console.log('worker message', msg);
+  // console.log('worker message', msg);
   const p = requests.get(msg.id);
   if (!p) {
     console.error('No request found for', msg);
@@ -49,11 +52,8 @@ async function sendToWorker(
 ): Promise<PhysicsResponse> {
   const m = { ...msg } as PhysicsMessage;
   m.id = i++;
-  let res;
-  let rej;
   const p = new Promise<PhysicsResponse>((resolve, reject) => {
-    res = resolve;
-    rej = reject;
+    requests.set(m.id, [resolve, reject]);
     setTimeout(() => {
       requests.delete(m.id);
       reject({
@@ -63,12 +63,11 @@ async function sendToWorker(
     }, timeout);
     physicsWorker.postMessage(m);
   });
-  requests.set(m.id, [res, rej]);
   return p;
 }
 
 function Scene() {
-  const [example, setExample] = React.useState(1);
+  const [example, setExample] = React.useState(0);
 
   const REST_LEN_START = 10;
   const INITIAL_RANDOM = 1000;
@@ -88,7 +87,24 @@ function Scene() {
     //   });
     // }),
     step: button(() => {
-      sim.world.fixedStep();
+      sendToWorker({
+        type: 'step',
+      })
+        .then((res) => {
+          if (res.type !== 'positions') return;
+          console.log('positions', res.positions);
+
+          const { positions } = res;
+          positions.forEach((pos, i) => {
+            const cubeRef = particleMeshRefs.current[i].current;
+            if (!cubeRef) {
+              console.log('no ref1', particleMeshRefs.current, i);
+              return;
+            }
+            cubeRef.position.set(pos.x, pos.y, pos.z);
+          });
+        })
+        .catch(console.error);
     }),
   });
 
@@ -207,46 +223,64 @@ function Scene() {
   let iter = 0;
   useFrame((_, delta) => {
     // sim.world.fixedStep(1 / 60, delta);
-    sim.world.fixedStep();
-    sim.nodeBodies.forEach((nb, i) => {
-      const { body, node } = nb;
-      const cubeRef = particleMeshRefs.current[i].current;
-      if (!cubeRef) {
-        console.log('no ref1', particleMeshRefs.current, i);
-        return;
-      }
-      cubeRef.position.copy(body.position);
-    });
-    let connectionTensions: [number, Connection][] = [];
-    sim.springs.forEach((s, i) => {
-      const lineRef = springMeshRefs.current[i].current;
-      if (!lineRef) {
-        // console.log('no ref2');
-        return;
-      }
-      const { bodyA, bodyB } = s.spring;
-      const a = bodyA.position;
-      const b = bodyB.position;
-      const len = a.distanceTo(b);
-      connectionTensions.push([len, s.connection]);
-      if (!a || !b) return;
-      lineRef.geometry.setPositions([a.x, a.y, a.z, b.x, b.y, b.z]);
-      lineRef.material.linewidth = 5 / len;
-    });
-    const correctAnswers = ['hfx-pzl', 'bvb-cmg', 'jqt-nvd'];
-    if (iter++ % 100 === 0) {
-      const top = connectionTensions.sort((a, b) => b[0] - a[0]).slice(0, 10);
-      top.forEach(([len, conn], i) => {
-        console.log(i, len, conn.toString());
-      });
-      const found = correctAnswers.every((ca) =>
-        top.find(([_, conn]) => conn.toString() === ca)
-      );
-      if (found) {
-        console.log('FOUND');
-      }
-      console.log('---');
-    }
+    // sendToWorker({
+    //   type: 'step',
+    // })
+    //   .then((res) => {
+    //     if (res.type !== 'positions') return;
+    //     const { positions } = res;
+    //     positions.forEach((pos, i) => {
+    //       const cubeRef = particleMeshRefs.current[i].current;
+    //       if (!cubeRef) {
+    //         console.log('no ref1', particleMeshRefs.current, i);
+    //         return;
+    //       }
+    //       cubeRef.position.set(pos.x, pos.y, pos.z);
+    //     });
+    //   })
+    //   .catch(console.error);
+    // sim.world.fixedStep();
+    // sim.nodeBodies.forEach((nb, i) => {
+    //   const { body, node } = nb;
+    //   const cubeRef = particleMeshRefs.current[i].current;
+    //   if (!cubeRef) {
+    //     console.log('no ref1', particleMeshRefs.current, i);
+    //     return;
+    //   }
+    //   cubeRef.position.copy(body.position);
+    // });
+    // let connectionTensions: [number, Connection][] = [];
+    // sim.springs.forEach((s, i) => {
+    //   const lineRef = springMeshRefs.current[i].current;
+    //   if (!lineRef) {
+    //     // console.log('no ref2');
+    //     return;
+    //   }
+    //   const { bodyA, bodyB } = s.spring;
+    //   const a = bodyA.position;
+    //   const b = bodyB.position;
+    //   const len = a.distanceTo(b);
+    //   connectionTensions.push([len, s.connection]);
+    //   if (!a || !b) return;
+    //   lineRef.geometry.setPositions([a.x, a.y, a.z, b.x, b.y, b.z]);
+    //   lineRef.material.linewidth = 100 / len;
+    //   // make it redder as line gets longer
+    //   lineRef.material.color = new THREE.Color((len * 10) / restLength, 0, 0);
+    // });
+    // const correctAnswers = ['hfx-pzl', 'bvb-cmg', 'jqt-nvd'];
+    // if (iter++ % 100 === 0) {
+    //   const top = connectionTensions.sort((a, b) => b[0] - a[0]).slice(0, 10);
+    //   top.forEach(([len, conn], i) => {
+    //     console.log(i, len, conn.toString());
+    //   });
+    //   const found = correctAnswers.every((ca) =>
+    //     top.find(([_, conn]) => conn.toString() === ca)
+    //   );
+    //   if (found) {
+    //     console.log('FOUND');
+    //   }
+    //   console.log('---');
+    // }
     // _.gl.render(_.scene, _.camera);
   });
 
