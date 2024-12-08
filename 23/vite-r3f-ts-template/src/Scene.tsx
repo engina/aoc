@@ -1,100 +1,116 @@
-import { OrbitControls } from '@react-three/drei';
+import { Line, OrbitControls } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { useControls } from 'leva';
 import { Perf } from 'r3f-perf';
-import { useRef } from 'react';
+import { createRef, RefObject, useRef } from 'react';
 import { BoxGeometry, Mesh, MeshBasicMaterial, Vector3 } from 'three';
 import { Cube } from './components/Cube';
 import { Plane } from './components/Plane';
 import { Sphere } from './components/Sphere';
-import { Physics, useBox } from '@react-three/cannon';
+// import { Physics, useBox } from '@react-three/cannon';
+import { Line2, LineSegments2 } from 'three-stdlib';
 
-import input from '../../25-input.txt?raw';
-
-export class Connection {
-  public static readonly all: Record<string, Connection> = {};
-  public static create(a: Node, b: Node) {
-    const key = [a.id, b.id].sort().join('-');
-    if (!Connection.all[key]) {
-      Connection.all[key] = new Connection(a, b);
-    }
-    return Connection.all[key];
-  }
-
-  private constructor(
-    public readonly a: Node,
-    public readonly b: Node,
-    public cut: boolean = false
-  ) {}
-
-  public other(node: Node) {
-    if (node === this.a) {
-      return this.b;
-    }
-    if (node === this.b) {
-      return this.a;
-    }
-    throw new Error('Node not in connection');
-  }
-
-  public isEqual(conn: Connection) {
-    return (
-      (conn.a === this.a && conn.b === this.b) || (conn.a === this.b && conn.b === this.a)
-    );
-  }
-}
-
-export class Node {
-  public static readonly all: Record<string, Node> = {};
-  public static create(id: string, connections?: Set<Connection>) {
-    if (Node.all[id] === undefined) {
-      Node.all[id] = new Node(id, connections);
-    }
-    return Node.all[id];
-  }
-
-  public readonly pos: Vector3 = new Vector3();
-
-  private constructor(
-    public readonly id: string,
-    public readonly conns: Set<Connection> = new Set()
-  ) {
-    const x = Math.random() * 10 - 5;
-    const y = Math.random() * 10 - 5;
-    const z = Math.random() * 10 - 5;
-    this.pos.set(x, y, z);
-  }
-
-  // Calculate the repulsive force Vector3 from this node to node to
-  private _force: Vector3 = new Vector3();
-  public force(to: Node): Vector3 {
-    const delta = this._force.copy(this.pos).sub(to.pos);
-    const dist = delta.length();
-    const force = delta.normalize().multiplyScalar(1 / dist ** 2);
-    return force;
-  }
-}
-
-input
-  .split('\n')
-  .filter((i) => !!i)
-  .map((line) => {
-    const [_id, ...nextIds] = line.split(' ');
-    let id = _id.slice(0, 3);
-
-    const node = Node.create(id);
-
-    nextIds.forEach((nextId) => {
-      const nextNode = Node.create(nextId);
-      const newConn = Connection.create(node, nextNode);
-      node.conns.add(newConn);
-      nextNode.conns.add(newConn);
-    });
-  });
+import { SampleParsedData } from '../../25/sample-data';
+import React from 'react';
+import {
+  Physics,
+  RapierRigidBody,
+  RigidBody,
+  useImpulseJoint,
+  useRopeJoint,
+  useSphericalJoint,
+  useSpringJoint,
+} from '@react-three/rapier';
+import { RawJointType } from '@dimforge/rapier3d-compat/rapier_wasm3d';
 
 const forceSum = new Vector3();
 
+class Particle {
+  public readonly connections = new Set<Spring>();
+  constructor(public readonly id: string, public pos: Vector3 = new Vector3()) {}
+}
+
+class Spring {
+  private v0 = new Vector3();
+  constructor(public a: Particle, public b: Particle, public length: number) {
+    a.connections.add(this);
+    b.connections.add(this);
+  }
+
+  force() {
+    const diff = this.v0.subVectors(this.a.pos, this.b.pos);
+    const length = diff.length();
+    const force = diff.multiplyScalar(0.1 * (length - this.length));
+    return force;
+  }
+
+  destroy() {
+    this.a.connections.delete(this);
+    this.b.connections.delete(this);
+  }
+
+  toString() {
+    return `${this.a.id}-${this.b.id}`;
+  }
+}
+const RopeJoint = ({
+  a,
+  b,
+  conn,
+}: {
+  a: RefObject<RapierRigidBody>;
+  b: RefObject<RapierRigidBody>;
+  conn: Line2 | LineSegments2;
+}) => {
+  // useSphericalJoint(a, b, [
+  //   [-0.5, 0, 0],
+  //   [0.5, 0, 0],
+  // ]);
+  const mass = 1;
+  const springRestLength = 0;
+  const stiffness = 1.0e3;
+  const criticalDamping = 10000; //2.0 * Math.sqrt(stiffness * mass);
+  const joint = useSpringJoint(a, b, [
+    [0, 0, 0],
+    [0, 0, 0],
+    springRestLength,
+    stiffness,
+    criticalDamping,
+  ]);
+
+  console.log({ conn });
+
+  return null;
+};
+
 function Scene() {
+  const [example, setExample] = React.useState(2);
+
+  const { particles, springs } = React.useMemo(() => {
+    const data = SampleParsedData[example];
+    const particles: Record<string, Particle> = {};
+
+    Object.values(data.nodeDict).forEach((node) => {
+      particles[node.id] = new Particle(
+        node.id,
+        new Vector3().random().multiplyScalar(2)
+      );
+    });
+
+    const springs = Object.values(data.connDict).map((conn) => {
+      const a = particles[conn.a.id];
+      const b = particles[conn.b.id];
+      if (!a || !b) {
+        throw new Error('Missing particle');
+      }
+      return new Spring(a, b, 1);
+    });
+    return {
+      particles: Object.values(particles),
+      springs,
+    };
+  }, [example]);
+
   const { performance } = useControls('Monitoring', {
     performance: false,
   });
@@ -105,22 +121,25 @@ function Scene() {
 
   const cubeRef = useRef<Mesh<BoxGeometry, MeshBasicMaterial>>(null);
 
+  const [counter, setCounter] = React.useState(0);
+
   useFrame((_, delta) => {
-    return;
-    // Calculate the repulsive forces
-    Object.values(Node.all).forEach((node) => {
+    particles.forEach((p) => {
       forceSum.set(0, 0, 0);
-      Object.values(Node.all).forEach((other) => {
-        if (node === other) {
-          return;
-        }
-        forceSum.add(node.force(other));
+      p.connections.forEach((s) => {
+        forceSum.add(s.force());
       });
-      node.pos.add(forceSum);
+      forceSum.multiplyScalar(0.1);
+      p.pos.add(forceSum);
+      // particleMeshRefs.current[p.id].position.copy(p.pos);
     });
-    // update the cube position
+    // setCounter((c) => c + 1);
   });
 
+  const particleMeshRefs = useRef(
+    Array.from({ length: particles.length }).map(() => createRef<RapierRigidBody>())
+  );
+  const springMeshRefs = useRef(Array.from({ length: springs.length }).map(() => createRef<Line2 | LineSegments2>());
   return (
     <>
       {performance && <Perf position='top-left' />}
@@ -135,10 +154,48 @@ function Scene() {
       />
       <ambientLight intensity={0.2} />
 
-      <Physics>
-        {Object.values(Node.all).map((node) => {
-          return <Cube key={node.id} node={node} />;
+      <Physics gravity={[0, 0, 0]}>
+        {particleMeshRefs.current.map((ref, i) => {
+          return (
+            <RigidBody ref={ref}>
+              <Cube key={i} position={particles[i].pos} />
+            </RigidBody>
+          );
         })}
+        {springMeshRefs.current.map((ref, i) => {
+          return (
+            <>
+            <Line
+              points={[new Vector3(), new Vector3()]}
+              ref={ref}
+            />
+            <RopeJoint
+              key={i}
+              a={particleMeshRefs.current[particles.findIndex((p) => p === ref.current.)]}
+              b={particleMeshRefs.current[particles.findIndex((p) => p === s.b)]}
+              conn={springMeshRefs.current[i]}
+            /></>
+          );
+        })}
+        {/* {springs.map((s, i) => {
+          return (
+            <>
+              <Line
+                points={[s.a.pos, s.b.pos]}
+                ref={(ref) => {
+                  if (!ref) return;
+                  springMeshRefs.current[i] = ref;
+                }}
+              />
+              <RopeJoint
+                key={i}
+                a={particleMeshRefs.current[particles.findIndex((p) => p === s.a)]}
+                b={particleMeshRefs.current[particles.findIndex((p) => p === s.b)]}
+                conn={springMeshRefs.current[i]}
+              />
+            </>
+          );
+        })} */}
       </Physics>
     </>
   );

@@ -5,12 +5,6 @@ const input = fs.readFileSync("input.txt", "utf-8");
 
 let state: "do" | "don't" = "do";
 
-type Match = {
-  match: RegExpMatchArray | null;
-  pos: number;
-  len: number;
-};
-
 class Reader {
   constructor(private lines: string, private pos = 0) {}
 

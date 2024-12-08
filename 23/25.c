@@ -1,118 +1,154 @@
-/*******************************************************************************************
- *
- *   raylib [models] example - Waving cubes
- *
- *   Example originally created with raylib 2.5, last time updated with raylib 3.7
- *
- *   Example contributed by Codecat (@codecat) and reviewed by Ramon Santamaria (@raysan5)
- *
- *   Example licensed under an unmodified zlib/libpng license, which is an OSI-certified,
- *   BSD-like license that allows static linking with closed source software
- *
- *   Copyright (c) 2019-2024 Codecat (@codecat) and Ramon Santamaria (@raysan5)
- *
- ********************************************************************************************/
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
 
-#include "raylib.h"
+#define MAX_NODES 100
+#define MAX_CONNECTIONS 1000
 
-#include <math.h> // Required for: sinf()
+typedef struct Connection Connection;
+typedef struct MNode MNode;
 
-//------------------------------------------------------------------------------------
-// Program main entry point
-//------------------------------------------------------------------------------------
-int main()
+struct Connection
 {
-  // Initialization
-  //--------------------------------------------------------------------------------------
-  const int screenWidth = 800;
-  const int screenHeight = 450;
+  MNode *a;
+  MNode *b;
+  bool cut;
+  char key[10];
+};
 
-  InitWindow(screenWidth, screenHeight, "raylib [models] example - waving cubes");
+struct MNode
+{
+  char id[10];
+  Connection *conns[MAX_NODES];
+  int conn_count;
+};
 
-  // Initialize the camera
-  Camera3D camera = {0};
-  camera.position = (Vector3){30.0f, 20.0f, 30.0f}; // Camera position
-  camera.target = (Vector3){0.0f, 0.0f, 0.0f};      // Camera looking at point
-  camera.up = (Vector3){0.0f, 1.0f, 0.0f};          // Camera up vector (rotation towards target)
-  camera.fovy = 70.0f;                              // Camera field-of-view Y
-  camera.projection = CAMERA_PERSPECTIVE;           // Camera projection type
+Connection connections[MAX_CONNECTIONS];
+int connection_count = 0;
 
-  // Specify the amount of blocks in each direction
-  const int numBlocks = 15;
+MNode nodes[MAX_NODES];
+int node_count = 0;
 
-  SetTargetFPS(60);
-  //--------------------------------------------------------------------------------------
-
-  // Main game loop
-  while (!WindowShouldClose()) // Detect window close button or ESC key
+MNode *get_or_create_node(const char *id)
+{
+  for (int i = 0; i < node_count; i++)
   {
-    // Update
-    //----------------------------------------------------------------------------------
-    double time = GetTime();
-
-    // Calculate time scale for cube position and size
-    float scale = (2.0f + (float)sin(time)) * 0.7f;
-
-    // Move camera around the scene
-    double cameraTime = time * 0.3;
-    camera.position.x = (float)cos(cameraTime) * 40.0f;
-    camera.position.z = (float)sin(cameraTime) * 40.0f;
-    //----------------------------------------------------------------------------------
-
-    // Draw
-    //----------------------------------------------------------------------------------
-    BeginDrawing();
-
-    ClearBackground(RAYWHITE);
-
-    BeginMode3D(camera);
-
-    DrawGrid(10, 5.0f);
-
-    for (int x = 0; x < numBlocks; x++)
+    if (strcmp(nodes[i].id, id) == 0)
     {
-      for (int y = 0; y < numBlocks; y++)
-      {
-        for (int z = 0; z < numBlocks; z++)
-        {
-          // Scale of the blocks depends on x/y/z positions
-          float blockScale = (x + y + z) / 30.0f;
-
-          // Scatter makes the waving effect by adding blockScale over time
-          float scatter = sinf(blockScale * 20.0f + (float)(time * 4.0f));
-
-          // Calculate the cube position
-          Vector3 cubePos = {
-              (float)(x - numBlocks / 2) * (scale * 3.0f) + scatter,
-              (float)(y - numBlocks / 2) * (scale * 2.0f) + scatter,
-              (float)(z - numBlocks / 2) * (scale * 3.0f) + scatter};
-
-          // Pick a color with a hue depending on cube position for the rainbow color effect
-          // NOTE: This function is quite costly to be done per cube and frame,
-          // pre-catching the results into a separate array could improve performance
-          Color cubeColor = ColorFromHSV((float)(((x + y + z) * 18) % 360), 0.75f, 0.9f);
-
-          // Calculate cube size
-          float cubeSize = (2.4f - scale) * blockScale;
-
-          // And finally, draw the cube!
-          DrawCube(cubePos, cubeSize, cubeSize, cubeSize, cubeColor);
-        }
-      }
+      return &nodes[i];
     }
+  }
+  MNode *new_node = &nodes[node_count++];
+  strcpy(new_node->id, id);
+  new_node->conn_count = 0;
+  return new_node;
+}
 
-    EndMode3D();
+Connection *create_connection(const char *aid, const char *bid)
+{
+  char key[10];
+  if (strcmp(aid, bid) < 0)
+    sprintf(key, "%s-%s", aid, bid);
+  else
+    sprintf(key, "%s-%s", bid, aid);
 
-    DrawFPS(10, 10);
-
-    EndDrawing();
-    //----------------------------------------------------------------------------------
+  for (int i = 0; i < connection_count; i++)
+  {
+    if (strcmp(connections[i].key, key) == 0)
+    {
+      return &connections[i];
+    }
   }
 
-  // De-Initialization
-  //--------------------------------------------------------------------------------------
-  CloseWindow(); // Close window and OpenGL context
-  //--------------------------------------------------------------------------------------
+  Connection *new_conn = &connections[connection_count++];
+  strcpy(new_conn->key, key);
+  new_conn->a = get_or_create_node(aid);
+  new_conn->b = get_or_create_node(bid);
+  new_conn->cut = false;
+
+  new_conn->a->conns[new_conn->a->conn_count++] = new_conn;
+  new_conn->b->conns[new_conn->b->conn_count++] = new_conn;
+
+  return new_conn;
+}
+
+int walk(MNode *node, bool *visited)
+{
+  if (visited[node - nodes])
+  {
+    return 0;
+  }
+
+  visited[node - nodes] = true;
+  int sum = 1;
+
+  for (int i = 0; i < node->conn_count; i++)
+  {
+    Connection *conn = node->conns[i];
+    if (conn->cut)
+    {
+      continue;
+    }
+
+    MNode *other = (conn->a == node) ? conn->b : conn->a;
+    sum += walk(other, visited);
+  }
+  return sum;
+}
+
+void parse_input(const char *input)
+{
+  char buffer[1024];
+  strcpy(buffer, input);
+  char *line = strtok(buffer, "\n");
+
+  while (line != NULL)
+  {
+    char id[10], nextId[10];
+    sscanf(line, "%s", id);
+
+    char *token = strtok(line + strlen(id) + 1, " ");
+    while (token != NULL)
+    {
+      create_connection(id, token);
+      token = strtok(NULL, " ");
+    }
+    line = strtok(NULL, "\n");
+  }
+}
+
+int main()
+{
+  const char *input = "jqt rhn xhk nvd\n"
+                      "rsh frs pzl lsr\n"
+                      "xhk hfx\n"
+                      "cmg qnr nvd lhk bvb\n"
+                      "rhn xhk bvb hfx\n"
+                      "bvb xhk hfx\n"
+                      "pzl lsr hfx nvd\n"
+                      "qnr nvd\n"
+                      "ntq jqt hfx bvb xhk\n"
+                      "nvd lhk\n"
+                      "lsr lhk\n"
+                      "rzs qnr cmg lsr rsh\n"
+                      "frs qnr lhk lsr\n";
+
+  parse_input(input);
+
+  int total_nodes = node_count;
+  for (int i = 0; i < connection_count; i++)
+  {
+    connections[i].cut = true;
+    bool visited[MAX_NODES] = {false};
+    int groupA = walk(&nodes[0], visited);
+    int groupB = total_nodes - groupA;
+
+    printf("Cut connection: %s, GroupA: %d, GroupB: %d\n",
+           connections[i].key, groupA, groupB);
+
+    connections[i].cut = false;
+  }
 
   return 0;
 }
