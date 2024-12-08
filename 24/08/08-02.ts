@@ -85,7 +85,6 @@ class City {
   private antennas: [string, Antenna][] = [];
   private antennaCanvas: Canvas;
   private antinodeCanvas: Canvas;
-  private antinodes: [Vector, Vector][] = [];
   public readonly width: number;
   public readonly height: number;
 
@@ -123,16 +122,16 @@ class City {
           this.width * 2,
           this.height * 2
         );
-        for (const [a1a, a2a] of antitodes) {
-          this.antinodeCanvas.set(a1a.x, a1a.y, a1.freq);
-          this.antinodeCanvas.set(a2a.x, a2a.y, a2.freq);
-          this.antinodes.push([a1a, a2a]);
+        for (const a of antitodes) {
+          this.antinodeCanvas.set(a.x, a.y, a1.freq);
         }
       }
       // if an antenna is not alone in his frequency range
-      // it has a antinode on itself as well
+      // it has an antinode on itself as well
       for (const a of antennas) {
-        if (this.antennas.filter(([f, _]) => f === a.freq).length < 1) continue;
+        if (this.antennas.filter(([f, _]) => f === a.freq).length < 1) {
+          continue;
+        }
         this.antinodeCanvas.set(a.pos.x, a.pos.y, a.freq);
       }
     }
@@ -165,8 +164,8 @@ class Antenna {
     b: Antenna,
     width: number,
     height: number
-  ): [Vector, Vector][] {
-    const result: [Vector, Vector][] = [];
+  ): Vector[] {
+    const result: Vector[] = [];
     // imagine A is at (1, 1) and B is at (2, 2)
     const d = a.pos.clone().sub(b.pos); // d = (-1, -1)
     const a1 = a.pos.clone();
@@ -174,12 +173,12 @@ class Antenna {
     while (true) {
       a1.add(d); // (0, 0)
       a2.sub(d); // (3, 3)
-      const diffX = Math.abs(a.pos.x - a1.x);
-      const diffY = Math.abs(a.pos.y - a1.y);
-      if (diffX >= width && diffY >= height) {
+      const count = result.length;
+      if (a1.isIn(width, height)) result.push(a1.clone());
+      if (a2.isIn(width, height)) result.push(a2.clone());
+      if (count === result.length) {
         break;
       }
-      result.push([a1.clone(), a2.clone()]);
     }
     return result;
   }
@@ -204,6 +203,10 @@ class Vector {
     this.x = x;
     this.y = y;
     return this;
+  }
+
+  isIn(width: number, height: number) {
+    return this.x >= 0 && this.x < width && this.y >= 0 && this.y < height;
   }
 
   clone() {

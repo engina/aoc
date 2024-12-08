@@ -1,7 +1,8 @@
 import fs from "fs";
 import { parse, ParseResult } from "./parse";
+import inputFile from "../25-input.txt?raw";
 
-const input1 = ""; //fs.readFileSync("25-input.txt", "utf-8");
+const input1 = inputFile; //fs.readFileSync("25-input.txt", "utf-8");
 
 const input2 = `jqt: rhn xhk nvd
 rsh: frs pzl lsr
@@ -38,7 +39,12 @@ d3: d4
 d6: d7
 `;
 
-export const SampleInputs = [input1, input2, input3];
+const input4 = `a1: a2
+a2: a3
+a3: a4
+`;
+
+export const SampleInputs = [input1, input2, input3, input4];
 
 export const SampleParsedData: ParseResult[] = SampleInputs.map((input) =>
   parse(input)

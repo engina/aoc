@@ -1,10 +1,10 @@
-import { Canvas } from '@react-three/fiber'
-import { Leva } from 'leva'
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import { ACESFilmicToneMapping, SRGBColorSpace } from 'three'
-import { Scene } from './Scene'
-import './styles/main.css'
+import { Canvas } from '@react-three/fiber';
+import { Leva } from 'leva';
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { ACESFilmicToneMapping, SRGBColorSpace } from 'three';
+import { Scene } from './Scene';
+import './styles/main.css';
 
 function Main() {
   return (
@@ -32,19 +32,19 @@ function Main() {
         camera={{
           fov: 55,
           near: 0.1,
-          far: 200,
-          position: [3, 2, 9],
+          far: 2000,
+          position: [30, 20, 90],
         }}
         shadows
       >
         <Scene />
       </Canvas>
     </div>
-  )
+  );
 }
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     <Main />
   </React.StrictMode>
-)
+);
