@@ -1,11 +1,25 @@
 import assert from "assert";
-import { combinations, Connection, nodeConnDiff, walk } from "./lib";
-import { SampleParsedData } from "./sample-data";
+import { Connection, nodeConnDiff, walk } from "./lib";
+import { combinations } from "../../lib";
+import { parse } from "./parse";
+import fs from "fs";
 
-const data = SampleParsedData[2];
+const data = parse(fs.readFileSync("./25-input.txt", "utf-8"));
 
 const nodes = Object.values(data.nodeDict);
 const conns = Object.values(data.connDict);
+
+console.log(`Nodes: ${nodes.length}`);
+console.log(`Connections: ${conns.length}`);
+
+data.connDict["jxb-ksq"].cut = true;
+data.connDict["nqq-pxp"].cut = true;
+data.connDict["dct-kns"].cut = true;
+
+const visited = walk(nodes[0]);
+const rest = nodes.length - visited;
+console.log({ visited, rest, mul: visited * rest });
+process.exit(0);
 
 let result: {
   conn: Connection[];

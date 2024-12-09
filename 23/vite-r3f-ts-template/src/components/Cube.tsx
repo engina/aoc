@@ -16,7 +16,7 @@ const Cube = forwardRef<CubeType, CubeProps>((props, fwref) => {
   // const [ref, api] = useBox(() => ({ mass: 1, position: node.pos.toArray() }), fwref);
   return (
     <mesh position={position} castShadow ref={fwref}>
-      <sphereGeometry args={[0.62, 4, 4]} />
+      <sphereGeometry args={[2, 4, 4]} />
       <meshStandardMaterial color={'yellow'} />
     </mesh>
   );

@@ -15,7 +15,7 @@ import * as THREE from 'three';
 import { SampleParsedData } from '../../25/sample-data';
 import { combinations } from '../../../lib';
 import React from 'react';
-import { Connection } from '../../25/lib';
+import { Connection, Node } from '../../25/lib';
 import { PhysicsMessage, PhysicsResponse } from './physics.worker';
 import { error } from 'console';
 
@@ -103,6 +103,25 @@ function Scene() {
             }
             cubeRef.position.set(pos.x, pos.y, pos.z);
           });
+
+          const connectionTensions: [number, Connection][] = [];
+          sim.springs.forEach((s, i) => {
+            const lineRef = springMeshRefs.current[i].current;
+            if (!lineRef) {
+              // console.log('no ref2');
+              return;
+            }
+            const { bodyA, bodyB } = s.spring;
+            const a = bodyA.position;
+            const b = bodyB.position;
+            const len = a.distanceTo(b);
+            connectionTensions.push([len, s.connection]);
+            if (!a || !b) return;
+            lineRef.geometry.setPositions([a.x, a.y, a.z, b.x, b.y, b.z]);
+            lineRef.material.linewidth = 100 / len;
+            // make it redder as line gets longer
+            lineRef.material.color = new THREE.Color((len * 10) / restLength, 0, 0);
+          });
         })
         .catch(console.error);
     }),
@@ -131,7 +150,7 @@ function Scene() {
       const col = i % rowWidth;
       const space = 2;
       const pos = new Vector3(row * space, col * space, Math.random() * 5 - 2.5);
-      console.log(node.id, 'row', row, 'col', col, pos);
+      // console.log(node.id, 'row', row, 'col', col, pos);
       const body = new Cannon.Body({
         mass: i === 0 ? 1 : 1,
         shape: new Cannon.Sphere(0.2),
@@ -156,21 +175,32 @@ function Scene() {
       });
       return { spring, connection };
     });
+    const combs: {
+      body: Cannon.Body;
+      node: Node;
+    }[][] = [];
+    for (const comb of combinations(nodeBodies, 2)) {
+      combs.push(comb);
+    }
 
+    const distanceVec = new Cannon.Vec3();
+    let i = 0;
     world.addEventListener('postStep', () => {
       // return;
-      springs.forEach((s) => {
-        s.spring.applyForce();
-      });
+      if (i++ % 2 === 0) {
+        springs.forEach((s) => {
+          s.spring.applyForce();
+          return;
+        });
+      }
 
       // calculate repulsive forces between all particles
       // console.log('rep calc');
-      for (const comb of combinations(nodeBodies, 2)) {
+      for (const comb of combs) {
         const { body: a, node: na } = comb[0];
         const { body: b, node: nb } = comb[1];
 
         // Calculate the repulsive (magnetic-like) force
-        const distanceVec = new Cannon.Vec3();
         b.position.vsub(a.position, distanceVec);
         const distance = distanceVec.length();
         // console.log(
@@ -208,7 +238,7 @@ function Scene() {
   }, [example]);
 
   const { performance } = useControls('Monitoring', {
-    performance: false,
+    performance: true,
   });
 
   React.useEffect(() => {
@@ -220,9 +250,10 @@ function Scene() {
     });
   }, [sim, force, stiffness, damping, restLength]);
 
-  let iter = 0;
+  let iter = -1;
   useFrame((_, delta) => {
-    // sim.world.fixedStep(1 / 60, delta);
+    iter++;
+    if (iter % 2 === 0) sim.world.fixedStep(0.1);
     // sendToWorker({
     //   type: 'step',
     // })
@@ -240,47 +271,49 @@ function Scene() {
     //   })
     //   .catch(console.error);
     // sim.world.fixedStep();
-    // sim.nodeBodies.forEach((nb, i) => {
-    //   const { body, node } = nb;
-    //   const cubeRef = particleMeshRefs.current[i].current;
-    //   if (!cubeRef) {
-    //     console.log('no ref1', particleMeshRefs.current, i);
-    //     return;
-    //   }
-    //   cubeRef.position.copy(body.position);
-    // });
-    // let connectionTensions: [number, Connection][] = [];
-    // sim.springs.forEach((s, i) => {
-    //   const lineRef = springMeshRefs.current[i].current;
-    //   if (!lineRef) {
-    //     // console.log('no ref2');
-    //     return;
-    //   }
-    //   const { bodyA, bodyB } = s.spring;
-    //   const a = bodyA.position;
-    //   const b = bodyB.position;
-    //   const len = a.distanceTo(b);
-    //   connectionTensions.push([len, s.connection]);
-    //   if (!a || !b) return;
-    //   lineRef.geometry.setPositions([a.x, a.y, a.z, b.x, b.y, b.z]);
-    //   lineRef.material.linewidth = 100 / len;
-    //   // make it redder as line gets longer
-    //   lineRef.material.color = new THREE.Color((len * 10) / restLength, 0, 0);
-    // });
+    for (let i = 0; i < sim.nodeBodies.length; i++) {
+      const body = sim.nodeBodies[i];
+      const cubeRef = particleMeshRefs.current[i].current;
+      if (!cubeRef) {
+        console.log('no ref1', particleMeshRefs.current, i);
+        return;
+      }
+      cubeRef.position.copy(body.body.position);
+    }
+
     // const correctAnswers = ['hfx-pzl', 'bvb-cmg', 'jqt-nvd'];
-    // if (iter++ % 100 === 0) {
-    //   const top = connectionTensions.sort((a, b) => b[0] - a[0]).slice(0, 10);
-    //   top.forEach(([len, conn], i) => {
-    //     console.log(i, len, conn.toString());
-    //   });
-    //   const found = correctAnswers.every((ca) =>
-    //     top.find(([_, conn]) => conn.toString() === ca)
-    //   );
-    //   if (found) {
-    //     console.log('FOUND');
-    //   }
-    //   console.log('---');
-    // }
+    if (iter % 100 === 0) {
+      let connectionTensions: [number, Connection][] = [];
+      sim.springs.forEach((s, i) => {
+        const lineRef = springMeshRefs.current[i].current;
+
+        const { bodyA, bodyB } = s.spring;
+        const a = bodyA.position;
+        const b = bodyB.position;
+        const len = a.distanceTo(b);
+        connectionTensions.push([len, s.connection]);
+        if (!a || !b) return;
+        if (!lineRef) {
+          // console.log('no ref2');
+          return;
+        }
+        lineRef.geometry.setPositions([a.x, a.y, a.z, b.x, b.y, b.z]);
+        lineRef.material.linewidth = 100 / len;
+        // make it redder as line gets longer
+        // lineRef.material.color = new THREE.Color((len * 10) / restLength, 0, 0);
+      });
+      const top = connectionTensions.sort((a, b) => b[0] - a[0]).slice(0, 10);
+      top.forEach(([len, conn], i) => {
+        console.log(i, len.toFixed(2), conn.toString());
+      });
+      // const found = correctAnswers.every((ca) =>
+      //   top.find(([_, conn]) => conn.toString() === ca)
+      // );
+      // if (found) {
+      //   console.log('FOUND');
+      // }
+      console.log('---');
+    }
     // _.gl.render(_.scene, _.camera);
   });
 

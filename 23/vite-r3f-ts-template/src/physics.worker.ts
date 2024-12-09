@@ -130,7 +130,7 @@ self.onmessage = (e: MessageEvent) => {
 
     case 'step':
       const started = performance.now();
-      world.fixedStep();
+      world.fixedStep(0.1);
       const elapsed = performance.now() - started;
       console.log('Step elapsed', elapsed);
       // Send updated positions back to main thread
@@ -143,3 +143,60 @@ self.onmessage = (e: MessageEvent) => {
       break;
   }
 };
+
+// import { World, RigidBodyDesc, SpringImpulseJoint, Vector3 } from '@dimforge/rapier3d';
+
+// function setupSimulation() {
+//   // Create the physics world with gravity
+//   const gravity = new Vector3(0, -9.81, 0);
+//   const world = new World(gravity);
+
+//   // Create the first rigid body
+//   const body1Desc = RigidBodyDesc.dynamic().setTranslation(0, 5, 0);
+//   const body1 = world.createRigidBody(body1Desc);
+
+//   // Create the second rigid body
+//   const body2Desc = RigidBodyDesc.dynamic().setTranslation(2, 5, 0);
+//   const body2 = world.createRigidBody(body2Desc);
+
+//   // Add a spring-like joint between body1 and body2
+//   const jointParams = new GenericJoint(
+//     {
+//       x: 0,
+//       y: 0,
+//       z: 0,
+//     }, // Anchor on body1
+//     {
+//       x: 0,
+//       y: 0,
+//       z: 0,
+//     } // Anchor on body2
+//   );
+
+//   // Configure spring-like behavior
+//   jointParams.setLinearStiffness(JointAxis.X, 10); // Stiffness along X
+//   jointParams.setLinearStiffness(JointAxis.Y, 10); // Stiffness along Y
+//   jointParams.setLinearStiffness(JointAxis.Z, 10); // Stiffness along Z
+//   jointParams.setLinearDamping(JointAxis.X, 1); // Damping along X
+//   jointParams.setLinearDamping(JointAxis.Y, 1); // Damping along Y
+//   jointParams.setLinearDamping(JointAxis.Z, 1); // Damping along Z
+
+//   world.createJoint(jointParams, body1, body2);
+
+//   // Simulation loop
+//   const simulate = () => {
+//     world.step(); // Advances the simulation
+
+//     // Retrieve the positions of the bodies
+//     const pos1 = body1.translation();
+//     const pos2 = body2.translation();
+
+//     console.log(`Body1: x=${pos1.x}, y=${pos1.y}, z=${pos1.z}`);
+//     console.log(`Body2: x=${pos2.x}, y=${pos2.y}, z=${pos2.z}`);
+
+//     // Continue simulation
+//     requestAnimationFrame(simulate);
+//   };
+
+//   simulate();
+// }

@@ -175,6 +175,11 @@
   resolved "https://registry.yarnpkg.com/@dimforge/rapier3d-compat/-/rapier3d-compat-0.14.0.tgz#c6148f743aa99de320231527c466c1a48ada4c9f"
   integrity sha512-/uHrUzS+CRQ+NQrrJCEDUkhwHlNsAAexbNXgbN9sHY+GwR+SFFAFrxRr8Llf5/AJZzqiLANdQIfJ63Cw4gJVqw==
 
+"@dimforge/rapier3d@^0.14.0":
+  version "0.14.0"
+  resolved "https://registry.yarnpkg.com/@dimforge/rapier3d/-/rapier3d-0.14.0.tgz#52a8770ecde3968b5f420f4ed6db1a1df953a432"
+  integrity sha512-+R9T/AGbvdRLentporVaOYEYjPHKdUeUuGObOBAskhSv8fFFyTiUcGMKhRH4VyCaGP8JAKMLapAETR4xAvJqlg==
+
 "@esbuild/aix-ppc64@0.21.5":
   version "0.21.5"
   resolved "https://registry.yarnpkg.com/@esbuild/aix-ppc64/-/aix-ppc64-0.21.5.tgz#c7184a326533fcdf1b8ee0733e21c713b975575f"
