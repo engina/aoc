@@ -1,0 +1,15 @@
+{
+  "name": "mincut",
+  "module": "main.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/three": "^0.170.0",
+    "bun-types": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "three": "^0.171.0"
+  }
+}

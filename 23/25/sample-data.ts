@@ -1,8 +1,8 @@
-import fs from "fs";
+import fs from "node:fs";
 import { parse, ParseResult } from "./parse";
-import inputFile from "../25-input.txt?raw";
+// import inputFile from "../25-input.txt?raw";
 
-const input1 = inputFile; //fs.readFileSync("25-input.txt", "utf-8");
+const input1 = fs.readFileSync("../25-input.txt", "utf-8");
 
 const input2 = `jqt: rhn xhk nvd
 rsh: frs pzl lsr
@@ -35,8 +35,6 @@ b3: a7 a8 a9 c3
 c1: d1 d2 d3
 c2: d4 d5 d6
 c3: d7 d8 d9
-d3: d4
-d6: d7
 `;
 
 const input4 = `a1: a2

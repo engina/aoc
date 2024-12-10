@@ -242,20 +242,10 @@ function checksumList(blockList: List<Block>) {
   return sum;
 }
 
-const bench = <R>(fn: () => R, label?: string) => {
-  const start = performance.now();
-  const result = fn();
-  const elapsed = performance.now() - start;
-  console.log(`[${label ?? "Bench"}] took: ${elapsed.toFixed(2)}ms`);
-  return result;
-};
+import { bench } from "../../lib";
 
 let l = bench(() => layout(input), "layoutting");
 const d = bench(() => defrag(l), "defragging");
 const c = bench(() => checksumList(d), "checksumming");
 
 console.log(c);
-
-// tried 986330392710 and failed
-// tried 80176601789 and failed
-// tried 84459391510

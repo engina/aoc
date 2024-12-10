@@ -36,3 +36,12 @@ export function* permutations<T>(arr: T[], N: number) {
 export function unique<T>(arr: T[]): T[] {
   return Array.from(new Set(arr));
 }
+
+export const bench = <R>(fn: () => R, label?: string, disabled = false) => {
+  const start = performance.now();
+  const result = fn();
+  const elapsed = performance.now() - start;
+  if (!disabled)
+    console.log(`[${label ?? "Bench"}] took: ${elapsed.toFixed(2)}ms`);
+  return result;
+};

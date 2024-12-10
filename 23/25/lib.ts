@@ -69,11 +69,11 @@ export class Node {
   private constructor(public readonly id: string) {}
 }
 
-export function walk<T>(
-  node: Node,
-  cb: (n: Node, payload?: T) => boolean = () => true,
+export function walk<T, N extends Node>(
+  node: N,
+  cb: (n: N, payload?: T) => boolean = () => true,
   payload?: T,
-  visited: Set<Node> = new Set()
+  visited: Set<N> = new Set()
 ) {
   if (visited.has(node)) {
     return 0;

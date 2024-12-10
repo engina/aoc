@@ -17,7 +17,6 @@ import { combinations } from '../../../lib';
 import React from 'react';
 import { Connection, Node } from '../../25/lib';
 import { PhysicsMessage, PhysicsResponse } from './physics.worker';
-import { error } from 'console';
 
 const physicsWorker = new Worker(new URL('./physics.worker.ts?worker', import.meta.url), {
   type: 'module',
@@ -65,15 +64,14 @@ async function sendToWorker(
   });
   return p;
 }
-
 function Scene() {
-  const [example, setExample] = React.useState(0);
+  const [example, setExample] = React.useState(1);
 
   const REST_LEN_START = 10;
   const INITIAL_RANDOM = 1000;
-  const { animate, force, stiffness, damping, restLength } = useControls('Cube', {
+  const config = useControls('Cube', {
     animate: true,
-    force: 800,
+    force: 10,
     damping: 0.6,
     stiffness: 0.1,
     restLength: REST_LEN_START,
@@ -90,44 +88,13 @@ function Scene() {
       sendToWorker({
         type: 'step',
       })
-        .then((res) => {
-          if (res.type !== 'positions') return;
-          console.log('positions', res.positions);
-
-          const { positions } = res;
-          positions.forEach((pos, i) => {
-            const cubeRef = particleMeshRefs.current[i].current;
-            if (!cubeRef) {
-              console.log('no ref1', particleMeshRefs.current, i);
-              return;
-            }
-            cubeRef.position.set(pos.x, pos.y, pos.z);
-          });
-
-          const connectionTensions: [number, Connection][] = [];
-          sim.springs.forEach((s, i) => {
-            const lineRef = springMeshRefs.current[i].current;
-            if (!lineRef) {
-              // console.log('no ref2');
-              return;
-            }
-            const { bodyA, bodyB } = s.spring;
-            const a = bodyA.position;
-            const b = bodyB.position;
-            const len = a.distanceTo(b);
-            connectionTensions.push([len, s.connection]);
-            if (!a || !b) return;
-            lineRef.geometry.setPositions([a.x, a.y, a.z, b.x, b.y, b.z]);
-            lineRef.material.linewidth = 100 / len;
-            // make it redder as line gets longer
-            lineRef.material.color = new THREE.Color((len * 10) / restLength, 0, 0);
-          });
-        })
+        .then((res) => {})
         .catch(console.error);
     }),
   });
-
+  /*
   const sim = React.useMemo(() => {
+    return;
     const config = {
       force: 12,
       stiffness: 1,
@@ -136,12 +103,12 @@ function Scene() {
       // gravity: new Cannon.Vec3(0, -9.82, 0),
     });
     const data = SampleParsedData[example];
-    sendToWorker({
-      type: 'init',
-      data,
-    } as PhysicsMessage)
-      .then(console.log)
-      .catch(console.error);
+    // sendToWorker({
+    //   type: 'init',
+    //   data,
+    // } as PhysicsMessage)
+    //   .then(console.log)
+    //   .catch(console.error);
 
     const nodes = Object.values(data.nodeDict);
     const rowWidth = Math.floor(Math.sqrt(nodes.length));
@@ -149,7 +116,7 @@ function Scene() {
       const row = Math.floor(i / rowWidth);
       const col = i % rowWidth;
       const space = 2;
-      const pos = new Vector3(row * space, col * space, Math.random() * 5 - 2.5);
+      const pos = new Vector3(row * space, col * space, Math.random() * 15 - 2.5);
       // console.log(node.id, 'row', row, 'col', col, pos);
       const body = new Cannon.Body({
         mass: i === 0 ? 1 : 1,
@@ -236,92 +203,103 @@ function Scene() {
 
     return { world, nodeBodies, connections, nodes, springs, config };
   }, [example]);
+*/
+  const sim2 = React.useMemo(() => {
+    const data = SampleParsedData[example];
+    const nodes = Object.values(data.nodeDict).map((n) => ({
+      ...n,
+      pos: new Vector3().random().multiplyScalar(1),
+      force: new Vector3(),
+    }));
+
+    const conns = Object.values(data.connDict).map((c) => {
+      const a = nodes.find((n) => n.id === c.a.id);
+      if (!a) throw new Error(`Node not found ${c.a.id}`);
+      const b = nodes.find((n) => n.id === c.b.id);
+      if (!b) throw new Error(`Node not found ${c.b.id}`);
+      return { ...c, a, b };
+    });
+
+    // console.log('nodes', nodes);
+    // console.log('conns', conns);
+
+    const nodeCombosIter = combinations(nodes, 2);
+    const nodeCombos = Array.from(nodeCombosIter);
+    const forceV = new Vector3();
+    function step(dt: number, cfg: typeof config) {
+      const { force, stiffness, restLength } = cfg;
+
+      for (const node of nodeCombos) {
+        const [a, b] = node;
+        const distance = a.pos.distanceTo(b.pos);
+        const repulsiveForce = force / distance ** 2;
+        forceV.copy(a.pos).sub(b.pos).normalize().multiplyScalar(repulsiveForce);
+        a.force.add(forceV);
+        b.force.sub(forceV);
+      }
+
+      for (const conn of conns) {
+        const { a, b } = conn;
+        const distance = a.pos.distanceTo(b.pos);
+        // spring force
+        // const restLength = 10;
+        const extension = distance - restLength;
+        const springForce = stiffness * extension;
+        forceV.copy(a.pos).sub(b.pos).normalize().multiplyScalar(springForce);
+        a.force.sub(forceV);
+        b.force.add(forceV);
+      }
+
+      for (const node of nodes) {
+        node.pos.add(node.force);
+        node.force.set(0, 0, 0);
+      }
+    }
+    return { step, nodes, conns };
+  }, [example]);
 
   const { performance } = useControls('Monitoring', {
     performance: true,
   });
 
-  React.useEffect(() => {
-    sim.config.force = force;
-    sim.springs.forEach((s) => {
-      s.spring.stiffness = stiffness;
-      s.spring.damping = damping;
-      s.spring.restLength = restLength;
-    });
-  }, [sim, force, stiffness, damping, restLength]);
-
   let iter = -1;
-  useFrame((_, delta) => {
-    iter++;
-    if (iter % 2 === 0) sim.world.fixedStep(0.1);
-    // sendToWorker({
-    //   type: 'step',
-    // })
-    //   .then((res) => {
-    //     if (res.type !== 'positions') return;
-    //     const { positions } = res;
-    //     positions.forEach((pos, i) => {
-    //       const cubeRef = particleMeshRefs.current[i].current;
-    //       if (!cubeRef) {
-    //         console.log('no ref1', particleMeshRefs.current, i);
-    //         return;
-    //       }
-    //       cubeRef.position.set(pos.x, pos.y, pos.z);
-    //     });
-    //   })
-    //   .catch(console.error);
-    // sim.world.fixedStep();
-    for (let i = 0; i < sim.nodeBodies.length; i++) {
-      const body = sim.nodeBodies[i];
+  useFrame((_) => {
+    sim2.step(10, config);
+    sim2.nodes.forEach((node, i) => {
       const cubeRef = particleMeshRefs.current[i].current;
       if (!cubeRef) {
         console.log('no ref1', particleMeshRefs.current, i);
         return;
       }
-      cubeRef.position.copy(body.body.position);
-    }
+      cubeRef.position.copy(node.pos);
+    });
 
-    // const correctAnswers = ['hfx-pzl', 'bvb-cmg', 'jqt-nvd'];
-    if (iter % 100 === 0) {
-      let connectionTensions: [number, Connection][] = [];
-      sim.springs.forEach((s, i) => {
-        const lineRef = springMeshRefs.current[i].current;
+    sim2.conns.forEach((conn, i) => {
+      const lineRef = springMeshRefs.current[i].current;
+      if (!lineRef) {
+        // console.log('no ref2');
+        return;
+      }
+      const { a, b } = conn;
+      lineRef.geometry.setPositions([
+        a.pos.x,
+        a.pos.y,
+        a.pos.z,
+        b.pos.x,
+        b.pos.y,
+        b.pos.z,
+      ]);
+      lineRef.material.linewidth = 100 / a.pos.distanceTo(b.pos);
+    });
 
-        const { bodyA, bodyB } = s.spring;
-        const a = bodyA.position;
-        const b = bodyB.position;
-        const len = a.distanceTo(b);
-        connectionTensions.push([len, s.connection]);
-        if (!a || !b) return;
-        if (!lineRef) {
-          // console.log('no ref2');
-          return;
-        }
-        lineRef.geometry.setPositions([a.x, a.y, a.z, b.x, b.y, b.z]);
-        lineRef.material.linewidth = 100 / len;
-        // make it redder as line gets longer
-        // lineRef.material.color = new THREE.Color((len * 10) / restLength, 0, 0);
-      });
-      const top = connectionTensions.sort((a, b) => b[0] - a[0]).slice(0, 10);
-      top.forEach(([len, conn], i) => {
-        console.log(i, len.toFixed(2), conn.toString());
-      });
-      // const found = correctAnswers.every((ca) =>
-      //   top.find(([_, conn]) => conn.toString() === ca)
-      // );
-      // if (found) {
-      //   console.log('FOUND');
-      // }
-      console.log('---');
-    }
-    // _.gl.render(_.scene, _.camera);
+    return;
   });
 
   const particleMeshRefs = useRef(
-    Array.from({ length: sim.nodes.length }).map(() => createRef<CubeType>())
+    Array.from({ length: sim2.nodes.length }).map(() => createRef<CubeType>())
   );
   const springMeshRefs = useRef(
-    Array.from({ length: sim.connections.length }).map(() =>
+    Array.from({ length: sim2.conns.length }).map(() =>
       createRef<Line2 | LineSegments2>()
     )
   );
@@ -342,7 +320,7 @@ function Scene() {
 
       {particleMeshRefs.current.map((ref, i) => {
         return (
-          <Cube key={i} position={new Vector3().random().multiplyScalar(4)} ref={ref} />
+          <Cube key={i} position={new Vector3().random().multiplyScalar(1)} ref={ref} />
         );
       })}
       {springMeshRefs.current.map((ref, i) => {

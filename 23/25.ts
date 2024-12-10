@@ -64,8 +64,11 @@ class Connection {
     );
   }
 }
+import * as THREE from "three";
 
 class MNode {
+  public pos: THREE.Vector3 = new THREE.Vector3();
+  public force: THREE.Vector3 = new THREE.Vector3();
   public static readonly all: Record<string, MNode> = {};
   public static get(id: string) {
     if (MNode.all[id] === undefined) {
@@ -98,7 +101,7 @@ input
 // Connection.all["jqt-nvd"].cut = true;
 
 // print node graph with circular structure handling
-function walk<T>(
+export function walk<T>(
   node: MNode,
   cb: (n: MNode, payload?: T) => boolean = () => true,
   payload?: T,

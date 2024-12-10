@@ -1,6 +1,7 @@
 import fs from "fs";
 import assert from "assert";
 
+const started = performance.now();
 const needle = "XMAS";
 
 const needleReversed = needle.split("").reverse().join("");
@@ -143,6 +144,8 @@ console.log(allLines.length);
 const counts = allLines.map((diag) => countOccurances(needle, diag));
 
 const sum = counts.reduce((acc, curr) => acc + curr, 0);
+const elapsed = performance.now() - started;
+console.log(`Took: ${elapsed.toFixed(2)}ms`);
 console.log(sum);
 
 // const sample = 150;
