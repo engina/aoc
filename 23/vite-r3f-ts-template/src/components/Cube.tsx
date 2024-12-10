@@ -1,9 +1,9 @@
 import { forwardRef } from 'react';
-import { Mesh, BoxGeometry, MeshBasicMaterial, Vector3 } from 'three';
+import { Mesh, BoxGeometry, MeshBasicMaterial, Vector3, SphereGeometry } from 'three';
 import { Physics, useBox } from '@react-three/cannon';
 import { Node } from '../../../25/lib';
 
-export type CubeType = Mesh<BoxGeometry, MeshBasicMaterial>;
+export type CubeType = Mesh<SphereGeometry, MeshBasicMaterial>;
 
 export type NodeUI = Node & { pos: Vector3 };
 

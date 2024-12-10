@@ -9,22 +9,24 @@ function vectorFactory() {
 
 const input = SampleInputs[0];
 
-class Connection {
-  public static readonly all: Record<string, Connection> = {};
-  public static create(aid: string, bid: string) {
+class ConnectionFactory {
+  public readonly all: Record<string, Connection> = {};
+  public create(aid: string, bid: string, nodeFactory: NodeFactory) {
     const key = [aid, bid].sort().join("-");
-    if (!Connection.all[key]) {
-      Connection.all[key] = new Connection(
-        Node.get(aid),
-        Node.get(bid),
+    if (!this.all[key]) {
+      this.all[key] = new Connection(
+        nodeFactory.get(aid),
+        nodeFactory.get(bid),
         false,
         key
       );
     }
-    return Connection.all[key];
+    return this.all[key];
   }
+}
 
-  private constructor(
+class Connection {
+  public constructor(
     public readonly a: Node,
     public readonly b: Node,
     public cut: boolean = false,
@@ -60,16 +62,18 @@ class Node {
   public pos = vectorFactory();
   public force = vectorFactory();
   public network: string = "";
-  public static readonly all: Record<string, Node> = {};
-  public static get(id: string) {
-    if (Node.all[id] === undefined) {
-      Node.all[id] = new Node(id);
-    }
-    return Node.all[id];
-  }
-
   public readonly conns: Set<Connection> = new Set();
-  private constructor(public readonly id: string) {}
+  public constructor(public readonly id: string) {}
+}
+
+class NodeFactory {
+  public readonly all: Record<string, Node> = {};
+  public get(id: string) {
+    if (this.all[id] === undefined) {
+      this.all[id] = new Node(id);
+    }
+    return this.all[id];
+  }
 }
 
 export function walk<T>(
@@ -93,150 +97,179 @@ export function walk<T>(
   return sum;
 }
 
-const data = parseDict(input);
+const DefaultCriteria: VerifyCallback<boolean> = (networks) =>
+  Object.values(networks).length > 1;
 
-data.forEach(([id, nextIds]) => {
-  nextIds.forEach((nextId) => {
-    Connection.create(id, nextId);
-  });
-});
+type VerifyCallback<R> = (networks: Record<string, number>) => R | false;
 
-const nodes = Object.values(Node.all);
-const conns = Object.values(Connection.all);
-
-const nodeCombosIter = combinations(nodes, 2);
-const nodeCombos = Array.from(nodeCombosIter);
-const forceV = vectorFactory();
-
-interface Config {
+interface Config<R> {
+  maxIter: number;
+  edges: number;
+  skipVerificationFor: number;
+  verifyCB: VerifyCallback<R>;
   force: number;
   stiffness: number;
   restLength: number;
 }
 
-function step(dt: number, cfg: Config) {
-  const { force, stiffness, restLength } = cfg;
+function PhysicalMinCut() {
+  const data = parseDict(input);
+  const nodeFactory = new NodeFactory();
+  const connFactory = new ConnectionFactory();
 
-  for (const node of nodeCombos) {
-    const [a, b] = node;
-    const distance = a.pos.distanceTo(b.pos);
-    const repulsiveForce = force / distance ** 2;
-    forceV.copy(a.pos).sub(b.pos).normalize().multiplyScalar(repulsiveForce);
-    a.force.add(forceV);
-    b.force.sub(forceV);
-  }
-
-  for (const conn of conns) {
-    const { a, b } = conn;
-    const distance = a.pos.distanceTo(b.pos);
-    const extension = distance - restLength;
-    const springForce = stiffness * extension;
-    forceV.copy(a.pos).sub(b.pos).normalize().multiplyScalar(springForce);
-    a.force.sub(forceV);
-    b.force.add(forceV);
-  }
-
-  for (const node of nodes) {
-    node.pos.add(node.force);
-    node.force.set(0, 0);
-  }
-}
-
-function longestConnections(top = 3) {
-  const sorted = conns.slice().sort((a, b) => {
-    return a.a.pos.distanceTo(a.b.pos) - b.a.pos.distanceTo(b.b.pos);
-  });
-
-  return sorted.slice(-top);
-}
-
-const DefaultCriteria: VerifyCallback<boolean> = (networks) =>
-  Object.values(networks).length > 1;
-
-type VerifyCallback<R> = (networks: Record<string, number>) => R;
-
-function verify<R>(cuts: Connection[], cb: VerifyCallback<R>): R {
-  const nodesOfInterest: Node[] = [];
-  for (const conn of cuts) {
-    conn.cut = true;
-    nodesOfInterest.push(conn.a, conn.b);
-  }
-
-  nodesOfInterest.forEach((node) => {
-    walk(node, (n) => {
-      n.network = node.id;
-      return true;
+  data.forEach(([id, nextIds]) => {
+    nextIds.forEach((nextId) => {
+      connFactory.create(id, nextId, nodeFactory);
     });
   });
+  const nodes = Object.values(nodeFactory.all);
+  const conns = Object.values(connFactory.all);
 
-  const networkSizes: Record<string, number> = {};
-  nodes.forEach((node) => {
-    if (!networkSizes[node.network]) {
-      networkSizes[node.network] = 0;
+  const nodeCombosIter = combinations(nodes, 2);
+  const nodeCombos = Array.from(nodeCombosIter);
+  const forceV = vectorFactory();
+
+  function step(dt: number, cfg: Config) {
+    const { force, stiffness, restLength } = cfg;
+
+    for (const node of nodeCombos) {
+      const [a, b] = node;
+      const distance = a.pos.distanceTo(b.pos);
+      const repulsiveForce = force / distance ** 2;
+      forceV.copy(a.pos).sub(b.pos).normalize().multiplyScalar(repulsiveForce);
+      a.force.add(forceV);
+      b.force.sub(forceV);
     }
-    networkSizes[node.network]++;
-  });
 
-  for (const conn of cuts) {
-    conn.cut = false;
+    for (const conn of conns) {
+      const { a, b } = conn;
+      const distance = a.pos.distanceTo(b.pos);
+      const extension = distance - restLength;
+      const springForce = stiffness * extension;
+      forceV.copy(a.pos).sub(b.pos).normalize().multiplyScalar(springForce);
+      a.force.sub(forceV);
+      b.force.add(forceV);
+    }
+
+    for (const node of nodes) {
+      node.pos.add(node.force);
+      node.force.set(0, 0);
+    }
   }
-  return cb(networkSizes);
+
+  function longestConnections(top = 3) {
+    const sorted = conns.slice().sort((a, b) => {
+      return a.a.pos.distanceTo(a.b.pos) - b.a.pos.distanceTo(b.b.pos);
+    });
+
+    return sorted.slice(-top);
+  }
+
+  function verify<R>(cuts: Connection[], cb: VerifyCallback<R>): R | false {
+    const nodesOfInterest: Node[] = [];
+    for (const conn of cuts) {
+      conn.cut = true;
+      nodesOfInterest.push(conn.a, conn.b);
+    }
+
+    nodesOfInterest.forEach((node) => {
+      walk(node, (n) => {
+        n.network = node.id;
+        return true;
+      });
+    });
+
+    const networkSizes: Record<string, number> = {};
+    nodes.forEach((node) => {
+      if (!networkSizes[node.network]) {
+        networkSizes[node.network] = 0;
+      }
+      networkSizes[node.network]++;
+    });
+
+    for (const conn of cuts) {
+      conn.cut = false;
+    }
+    return cb(networkSizes);
+  }
+
+  function run<R>(cfg: Config<R>):
+    | (R & {
+        nodes: Node[];
+        conns: Connection[];
+        result: Connection[];
+        iter: number;
+      })
+    | false {
+    const { maxIter, edges, verifyCB, skipVerificationFor } = cfg;
+    const rnd = new THREE.Vector3(1, 2, 3).normalize();
+    nodes.forEach((node, i) => {
+      // rotate the rnd vector around the very center and add it to the node position
+      node.pos.add(rnd.clone().applyAxisAngle(new THREE.Vector3(0, 0, 1), i));
+    });
+
+    for (let i = 0; i < maxIter; i++) {
+      bench(() => step(1, config), "step", true);
+
+      const result = bench(
+        () => longestConnections(edges),
+        "longestConnections",
+        true
+      );
+
+      let ver: false | R = false;
+
+      if (i > skipVerificationFor)
+        ver = bench(() => verify(result, verifyCB), "verify");
+
+      if (ver) {
+        return { ...ver, nodes, conns, result, iter: i };
+      }
+    }
+    return false;
+  }
+
+  return {
+    run,
+    step,
+    verify,
+    nodes,
+    conns,
+  };
 }
 
-const config: Config = {
+const f = PhysicalMinCut();
+
+const config: Config<{
+  networks: Record<string, number>;
+  mul: number;
+}> = {
+  maxIter: 1000,
+  skipVerificationFor: 20,
+  verifyCB: (networks) => {
+    const sizes = Object.values(networks);
+    if (sizes.length !== 2) return false;
+    return {
+      networks,
+      mul: sizes.reduce((acc, s) => acc * s, 1),
+    };
+  },
+  edges: 3,
   force: 10,
   stiffness: 0.1,
   restLength: 10,
 };
 
-function run(maxIter = 1000, connections = 3) {
-  const rnd = new THREE.Vector3(1, 2, 3).normalize();
-  nodes.forEach((node, i) => {
-    // rotate the rnd vector around the very center and add it to the node position
-    node.pos.add(rnd.clone().applyAxisAngle(new THREE.Vector3(0, 0, 1), i));
-  });
+const runResult = bench(() => f.run(config), "run");
 
-  for (let i = 0; i < maxIter; i++) {
-    bench(() => step(1, config), "step", true);
+if (runResult) {
+  const { nodes, mul, result, iter } = runResult;
+  console.log(
+    `Found a configuration that meets the criteria in ${iter} steps`,
+    result.map((r) => r.toString()).join(", ")
+  );
 
-    const result = bench(
-      () => longestConnections(connections),
-      "longestConnections",
-      true
-    );
-    let ver:
-      | false
-      | {
-          networks: Record<string, number>;
-          mul: number;
-        } = false;
-
-    if (i > 20)
-      ver = bench(
-        () =>
-          verify(result, (networks) => {
-            const sizes = Object.values(networks);
-            if (sizes.length !== 2) return false;
-            return {
-              networks,
-              mul: sizes.reduce((acc, s) => acc * s, 1),
-            };
-          }),
-        "verify"
-      );
-
-    if (ver) {
-      console.log(
-        `Found a configuration that meets the criteria in ${i} steps`,
-        result.map((r) => r.toString()).join(", ")
-      );
-
-      const totalNodes = nodes.length;
-      console.log("Total nodes", totalNodes);
-      console.log("Visited * Remaining", ver.mul);
-      break;
-    }
-  }
+  const totalNodes = nodes.length;
+  console.log("Total nodes", totalNodes);
+  console.log("Visited * Remaining", mul);
 }
-
-bench(() => run());

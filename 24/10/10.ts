@@ -2,7 +2,7 @@ import { parseArr } from "../../lib/parse";
 import "colors";
 import fs from "fs";
 
-const DEBUG = false;
+const DEBUG = true;
 
 const input = fs.readFileSync("input.txt", "utf-8");
 
@@ -143,8 +143,6 @@ class Map {
 }
 
 const map = new Map(data);
-// debug("nb", map.findAll("0")[0]);
-// const summits: SummitPath[] = [];
 
 const walks = map.findAll("0").map((cell) => cell.walk());
 
@@ -156,10 +154,13 @@ const totalTrails = walks
   .map((w) => w.summitPaths.length)
   .reduce((acc, curr) => acc + curr, 0);
 
+walks.forEach((w) => summitsPrint(w.summitPaths.flat()));
+
 console.log("part1: total summits", summits);
 console.log("part2: total trails", totalTrails);
 
 function summitsPrint(summits: SummitPath) {
+  if (!DEBUG) return;
   const hline = "+" + "-".repeat(map.width) + "+";
   debug(hline);
   for (let y = 0; y < map.height; y++) {

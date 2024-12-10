@@ -1,69 +1,19 @@
-import { Line, OrbitControls } from '@react-three/drei';
+import { Line, OrbitControls, Point, Points, PositionPoint } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { button, useControls } from 'leva';
 import { Perf } from 'r3f-perf';
 import { createRef, RefObject, useRef } from 'react';
 import { BoxGeometry, Mesh, MeshBasicMaterial, Vector3 } from 'three';
 import { Cube, CubeType } from './components/Cube';
-import { Plane } from './components/Plane';
-import { Sphere } from './components/Sphere';
-// import { Physics, useBox } from '@react-three/cannon';
 import { Line2, LineGeometry, LineSegments2 } from 'three-stdlib';
-import * as Cannon from 'cannon-es';
 import * as THREE from 'three';
 
 import { SampleParsedData } from '../../25/sample-data';
 import { combinations } from '../../../lib';
 import React from 'react';
-import { Connection, Node } from '../../25/lib';
-import { PhysicsMessage, PhysicsResponse } from './physics.worker';
 
-const physicsWorker = new Worker(new URL('./physics.worker.ts?worker', import.meta.url), {
-  type: 'module',
-});
+i;
 
-const requests = new Map<
-  number,
-  [(r: PhysicsResponse) => void, (r: PhysicsResponse) => void]
->();
-
-physicsWorker.onmessage = (e: MessageEvent) => {
-  const msg = e.data as PhysicsResponse;
-  // console.log('worker message', msg);
-  const p = requests.get(msg.id);
-  if (!p) {
-    console.error('No request found for', msg);
-    return;
-  }
-  const [resolve, reject] = p;
-  if (msg.status === 'ok') {
-    resolve(msg);
-  } else {
-    reject(msg);
-  }
-  requests.delete(msg.id);
-};
-
-let i = 0;
-async function sendToWorker(
-  msg: Omit<PhysicsMessage, 'id'>,
-  timeout = 1000
-): Promise<PhysicsResponse> {
-  const m = { ...msg } as PhysicsMessage;
-  m.id = i++;
-  const p = new Promise<PhysicsResponse>((resolve, reject) => {
-    requests.set(m.id, [resolve, reject]);
-    setTimeout(() => {
-      requests.delete(m.id);
-      reject({
-        error: 'timeout',
-        msg,
-      });
-    }, timeout);
-    physicsWorker.postMessage(m);
-  });
-  return p;
-}
 function Scene() {
   const [example, setExample] = React.useState(0);
 
@@ -71,7 +21,7 @@ function Scene() {
   const INITIAL_RANDOM = 1000;
   const config = useControls('Cube', {
     animate: true,
-    force: 10,
+    force: 1,
     damping: 0.6,
     stiffness: 0.1,
     restLength: REST_LEN_START,
@@ -84,126 +34,9 @@ function Scene() {
     //     );
     //   });
     // }),
-    step: button(() => {
-      sendToWorker({
-        type: 'step',
-      })
-        .then((res) => {})
-        .catch(console.error);
-    }),
+    step: button(() => {}),
   });
-  /*
-  const sim = React.useMemo(() => {
-    return;
-    const config = {
-      force: 12,
-      stiffness: 1,
-    };
-    const world = new Cannon.World({
-      // gravity: new Cannon.Vec3(0, -9.82, 0),
-    });
-    const data = SampleParsedData[example];
-    // sendToWorker({
-    //   type: 'init',
-    //   data,
-    // } as PhysicsMessage)
-    //   .then(console.log)
-    //   .catch(console.error);
 
-    const nodes = Object.values(data.nodeDict);
-    const rowWidth = Math.floor(Math.sqrt(nodes.length));
-    const nodeBodies = nodes.map((node, i) => {
-      const row = Math.floor(i / rowWidth);
-      const col = i % rowWidth;
-      const space = 2;
-      const pos = new Vector3(row * space, col * space, Math.random() * 15 - 2.5);
-      // console.log(node.id, 'row', row, 'col', col, pos);
-      const body = new Cannon.Body({
-        mass: i === 0 ? 1 : 1,
-        shape: new Cannon.Sphere(0.2),
-        position: new Cannon.Vec3(pos.x, pos.y, pos.z),
-      });
-      body.linearDamping = 0.6;
-      body.angularDamping = 0.6;
-      world.addBody(body);
-      return { body, node };
-    });
-
-    const connections = Object.values(data.connDict);
-    const springs = connections.map((connection) => {
-      const a = nodeBodies.find((nb) => nb.node.id === connection.a.id);
-      const b = nodeBodies.find((nb) => nb.node.id === connection.b.id);
-      if (!a || !b) throw new Error('Node not found');
-
-      const spring = new Cannon.Spring(a.body, b.body, {
-        restLength: 1,
-        stiffness: config.stiffness,
-        damping: 0.01,
-      });
-      return { spring, connection };
-    });
-    const combs: {
-      body: Cannon.Body;
-      node: Node;
-    }[][] = [];
-    for (const comb of combinations(nodeBodies, 2)) {
-      combs.push(comb);
-    }
-
-    const distanceVec = new Cannon.Vec3();
-    let i = 0;
-    world.addEventListener('postStep', () => {
-      // return;
-      if (i++ % 2 === 0) {
-        springs.forEach((s) => {
-          s.spring.applyForce();
-          return;
-        });
-      }
-
-      // calculate repulsive forces between all particles
-      // console.log('rep calc');
-      for (const comb of combs) {
-        const { body: a, node: na } = comb[0];
-        const { body: b, node: nb } = comb[1];
-
-        // Calculate the repulsive (magnetic-like) force
-        b.position.vsub(a.position, distanceVec);
-        const distance = distanceVec.length();
-        // console.log(
-        //   'repulsive',
-        //   na.id,
-        //   nb.id,
-        //   distance,
-        //   distanceVec,
-        //   a.position,
-        //   b.position
-        // );
-
-        if (distance > 0) {
-          const forceMagnitude = config.force / (distance * distance); // Inverse-square law
-          const force = distanceVec.unit().scale(forceMagnitude); // Normalize and scale
-          // console.log('force', force);
-          a.applyForce(force.negate(), a.position);
-          b.applyForce(force, b.position);
-        } else {
-          // repel with max force on random direction
-          const force = new Cannon.Vec3(
-            Math.random() - 0.5,
-            Math.random() - 0.5,
-            Math.random() - 0.5
-          )
-            .unit()
-            .scale(config.force);
-          a.applyForce(force, a.position);
-          b.applyForce(force.negate(), b.position);
-        }
-      }
-    });
-
-    return { world, nodeBodies, connections, nodes, springs, config };
-  }, [example]);
-*/
   const sim2 = React.useMemo(() => {
     const data = SampleParsedData[example];
     const nodes = Object.values(data.nodeDict).map((n) => ({
@@ -289,14 +122,15 @@ function Scene() {
         b.pos.y,
         b.pos.z,
       ]);
-      lineRef.material.linewidth = 100 / a.pos.distanceTo(b.pos);
+      const len = a.pos.distanceTo(b.pos);
+      lineRef.material.linewidth = (config.restLength * 2) / a.pos.distanceTo(b.pos);
     });
 
     return;
   });
 
   const particleMeshRefs = useRef(
-    Array.from({ length: sim2.nodes.length }).map(() => createRef<CubeType>())
+    Array.from({ length: sim2.nodes.length }).map(() => createRef<PositionPoint>())
   );
   const springMeshRefs = useRef(
     Array.from({ length: sim2.conns.length }).map(() =>
@@ -318,13 +152,23 @@ function Scene() {
       />
       <ambientLight intensity={0.2} />
 
-      {particleMeshRefs.current.map((ref, i) => {
+      <Points limit={particleMeshRefs.current.length}>
+        {particleMeshRefs.current.map((ref, i) => {
+          return (
+            <Point
+              key={i}
+              position={new Vector3().random().multiplyScalar(1)}
+              ref={ref}
+            />
+          );
+        })}
+      </Points>
+      {/* {particleMeshRefs.current.map((ref, i) => {
         return (
           <Cube key={i} position={new Vector3().random().multiplyScalar(1)} ref={ref} />
         );
-      })}
+      })} */}
       {springMeshRefs.current.map((ref, i) => {
-        // return null;
         return (
           <Line
             key={i}
