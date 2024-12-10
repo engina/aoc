@@ -38,10 +38,10 @@ export function unique<T>(arr: T[]): T[] {
 }
 
 export const bench = <R>(fn: () => R, label?: string, disabled = false) => {
+  if (disabled) return fn();
   const start = performance.now();
   const result = fn();
   const elapsed = performance.now() - start;
-  if (!disabled)
-    console.log(`[${label ?? "Bench"}] took: ${elapsed.toFixed(2)}ms`);
+  console.log(`[${label ?? "Bench"}] took: ${elapsed.toFixed(2)}ms`);
   return result;
 };

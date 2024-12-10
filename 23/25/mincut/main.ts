@@ -2,7 +2,10 @@ import { bench, combinations } from "../../../lib";
 import * as THREE from "three";
 import { parseDict } from "../../../lib/parse";
 import { SampleInputs } from "../sample-data";
-// import fs from "fs";
+
+function vectorFactory() {
+  return new THREE.Vector2();
+}
 
 const input = SampleInputs[0];
 
@@ -54,8 +57,8 @@ class Connection {
 }
 
 class Node {
-  public pos: THREE.Vector3 = new THREE.Vector3().random().multiplyScalar(0.1);
-  public force: THREE.Vector3 = new THREE.Vector3();
+  public pos = vectorFactory();
+  public force = vectorFactory();
   public network: string = "";
   public static readonly all: Record<string, Node> = {};
   public static get(id: string) {
@@ -103,7 +106,7 @@ const conns = Object.values(Connection.all);
 
 const nodeCombosIter = combinations(nodes, 2);
 const nodeCombos = Array.from(nodeCombosIter);
-const forceV = new THREE.Vector3();
+const forceV = vectorFactory();
 
 interface Config {
   force: number;
@@ -135,7 +138,7 @@ function step(dt: number, cfg: Config) {
 
   for (const node of nodes) {
     node.pos.add(node.force);
-    node.force.set(0, 0, 0);
+    node.force.set(0, 0);
   }
 }
 
@@ -181,44 +184,46 @@ function verify<R>(cuts: Connection[], cb: VerifyCallback<R>): R {
 }
 
 const config: Config = {
-  force: 50,
+  force: 10,
   stiffness: 0.1,
   restLength: 10,
 };
 
 function run(maxIter = 1000, connections = 3) {
+  const rnd = new THREE.Vector3(1, 2, 3).normalize();
+  nodes.forEach((node, i) => {
+    // rotate the rnd vector around the very center and add it to the node position
+    node.pos.add(rnd.clone().applyAxisAngle(new THREE.Vector3(0, 0, 1), i));
+  });
+
   for (let i = 0; i < maxIter; i++) {
-    step(1, config);
-    //bench(() => step(1, config), "step", false);
+    bench(() => step(1, config), "step", true);
 
-    const result = longestConnections(connections);
-    // const result = bench(
-    //   () => longestConnections(connections),
-    //   "longestConnections",
-    //   true
-    // );
+    const result = bench(
+      () => longestConnections(connections),
+      "longestConnections",
+      true
+    );
+    let ver:
+      | false
+      | {
+          networks: Record<string, number>;
+          mul: number;
+        } = false;
 
-    const ver = verify(result, (networks) => {
-      const sizes = Object.values(networks);
-      if (sizes.length !== 2) return false;
-      return {
-        networks,
-        mul: sizes.reduce((acc, s) => acc * s, 1),
-      };
-    });
-
-    // const ver = bench(
-    //   () =>
-    //     verify(result, (networks) => {
-    //       const sizes = Object.values(networks);
-    //       if (sizes.length !== 2) return false;
-    //       return {
-    //         networks,
-    //         mul: sizes.reduce((acc, s) => acc * s, 1),
-    //       };
-    //     }),
-    //   "verify"
-    // );
+    if (i > 20)
+      ver = bench(
+        () =>
+          verify(result, (networks) => {
+            const sizes = Object.values(networks);
+            if (sizes.length !== 2) return false;
+            return {
+              networks,
+              mul: sizes.reduce((acc, s) => acc * s, 1),
+            };
+          }),
+        "verify"
+      );
 
     if (ver) {
       console.log(

@@ -65,7 +65,7 @@ async function sendToWorker(
   return p;
 }
 function Scene() {
-  const [example, setExample] = React.useState(1);
+  const [example, setExample] = React.useState(0);
 
   const REST_LEN_START = 10;
   const INITIAL_RANDOM = 1000;
