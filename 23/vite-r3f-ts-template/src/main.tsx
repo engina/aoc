@@ -32,7 +32,7 @@ function Main() {
         camera={{
           fov: 55,
           near: 0.1,
-          far: 2000,
+          far: 2000000,
           position: [30, 20, 90].map((n) => n * 10) as [number, number, number],
         }}
         shadows

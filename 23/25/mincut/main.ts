@@ -102,7 +102,7 @@ const DefaultCriteria: VerifyCallback<boolean> = (networks) =>
 
 type VerifyCallback<R> = (networks: Record<string, number>) => R | false;
 
-interface Config<R> {
+export interface Config<R> {
   maxIter: number;
   edges: number;
   skipVerificationFor: number;
@@ -112,7 +112,7 @@ interface Config<R> {
   restLength: number;
 }
 
-function PhysicalMinCut() {
+export function PhysicalMinCut(input: string) {
   const data = parseDict(input);
   const nodeFactory = new NodeFactory();
   const connFactory = new ConnectionFactory();
@@ -127,9 +127,16 @@ function PhysicalMinCut() {
 
   const nodeCombosIter = combinations(nodes, 2);
   const nodeCombos = Array.from(nodeCombosIter);
+
+  const rnd = new THREE.Vector3(1, 2, 3).normalize();
+  nodes.forEach((node, i) => {
+    // rotate the rnd vector around the very center and add it to the node position
+    node.pos.add(rnd.clone().applyAxisAngle(new THREE.Vector3(0, 0, 1), i));
+  });
+
   const forceV = vectorFactory();
 
-  function step(dt: number, cfg: Config) {
+  function step<R>(dt: number, cfg: Config<R>) {
     const { force, stiffness, restLength } = cfg;
 
     for (const node of nodeCombos) {
@@ -151,14 +158,15 @@ function PhysicalMinCut() {
       b.force.add(forceV);
     }
 
+    let i = 0;
     for (const node of nodes) {
-      node.pos.add(node.force);
+      node.pos.add(node.force.multiplyScalar(0.000001));
       node.force.set(0, 0);
     }
   }
 
-  function longestConnections(top = 3) {
-    const sorted = conns.slice().sort((a, b) => {
+  function longestEdges(top = 3) {
+    const sorted = conns.sort((a, b) => {
       return a.a.pos.distanceTo(a.b.pos) - b.a.pos.distanceTo(b.b.pos);
     });
 
@@ -202,17 +210,12 @@ function PhysicalMinCut() {
       })
     | false {
     const { maxIter, edges, verifyCB, skipVerificationFor } = cfg;
-    const rnd = new THREE.Vector3(1, 2, 3).normalize();
-    nodes.forEach((node, i) => {
-      // rotate the rnd vector around the very center and add it to the node position
-      node.pos.add(rnd.clone().applyAxisAngle(new THREE.Vector3(0, 0, 1), i));
-    });
 
     for (let i = 0; i < maxIter; i++) {
-      bench(() => step(1, config), "step", true);
+      bench(() => step(1, cfg), "step", true);
 
       const result = bench(
-        () => longestConnections(edges),
+        () => longestEdges(edges),
         "longestConnections",
         true
       );
@@ -233,43 +236,44 @@ function PhysicalMinCut() {
     run,
     step,
     verify,
+    longestEdges,
     nodes,
     conns,
   };
 }
 
-const f = PhysicalMinCut();
+// const f = PhysicalMinCut(SampleInputs[0]);
 
-const config: Config<{
-  networks: Record<string, number>;
-  mul: number;
-}> = {
-  maxIter: 1000,
-  skipVerificationFor: 20,
-  verifyCB: (networks) => {
-    const sizes = Object.values(networks);
-    if (sizes.length !== 2) return false;
-    return {
-      networks,
-      mul: sizes.reduce((acc, s) => acc * s, 1),
-    };
-  },
-  edges: 3,
-  force: 10,
-  stiffness: 0.1,
-  restLength: 10,
-};
+// const config: Config<{
+//   networks: Record<string, number>;
+//   mul: number;
+// }> = {
+//   maxIter: 1000,
+//   skipVerificationFor: 20,
+//   verifyCB: (networks) => {
+//     const sizes = Object.values(networks);
+//     if (sizes.length !== 2) return false;
+//     return {
+//       networks,
+//       mul: sizes.reduce((acc, s) => acc * s, 1),
+//     };
+//   },
+//   edges: 3,
+//   force: 10,
+//   stiffness: 0.1,
+//   restLength: 10,
+// };
 
-const runResult = bench(() => f.run(config), "run");
+// const runResult = bench(() => f.run(config), "run");
 
-if (runResult) {
-  const { nodes, mul, result, iter } = runResult;
-  console.log(
-    `Found a configuration that meets the criteria in ${iter} steps`,
-    result.map((r) => r.toString()).join(", ")
-  );
+// if (runResult) {
+//   const { nodes, mul, result, iter } = runResult;
+//   console.log(
+//     `Found a configuration that meets the criteria in ${iter} steps`,
+//     result.map((r) => r.toString()).join(", ")
+//   );
 
-  const totalNodes = nodes.length;
-  console.log("Total nodes", totalNodes);
-  console.log("Visited * Remaining", mul);
-}
+//   const totalNodes = nodes.length;
+//   console.log("Total nodes", totalNodes);
+//   console.log("Visited * Remaining", mul);
+// }

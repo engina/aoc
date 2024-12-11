@@ -1,4 +1,12 @@
-import { Line, OrbitControls, Point, Points, PositionPoint } from '@react-three/drei';
+import {
+  Cloud,
+  Clouds,
+  Line,
+  OrbitControls,
+  Point,
+  Points,
+  PositionPoint,
+} from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { button, useControls } from 'leva';
 import { Perf } from 'r3f-perf';
@@ -8,18 +16,17 @@ import { Cube, CubeType } from './components/Cube';
 import { Line2, LineGeometry, LineSegments2 } from 'three-stdlib';
 import * as THREE from 'three';
 
-import { SampleParsedData } from '../../25/sample-data';
-import { combinations } from '../../../lib';
+import { SampleParsedData, SampleInputs } from '../../25/sample-data';
+import { bench, combinations } from '../../../lib';
+import { Config, PhysicalMinCut } from '../../25/mincut/main';
 import React from 'react';
-
-i;
 
 function Scene() {
   const [example, setExample] = React.useState(0);
 
   const REST_LEN_START = 10;
   const INITIAL_RANDOM = 1000;
-  const config = useControls('Cube', {
+  const controls = useControls('Cube', {
     animate: true,
     force: 1,
     damping: 0.6,
@@ -37,58 +44,88 @@ function Scene() {
     step: button(() => {}),
   });
 
+  React.useEffect(() => {
+    console.log('controls', controls);
+  }, [controls]);
+
+  const config: Config<{
+    networks: Record<string, number>;
+    mul: number;
+  }> = React.useMemo(
+    () => ({
+      maxIter: 1000,
+      skipVerificationFor: 20,
+      verifyCB: (networks) => {
+        const sizes = Object.values(networks);
+        if (sizes.length !== 2) return false;
+        return {
+          networks,
+          mul: sizes.reduce((acc, s) => acc * s, 1),
+        };
+      },
+      edges: 3,
+      force: 10,
+      stiffness: 0.1,
+      restLength: 10,
+    }),
+    []
+  );
+
   const sim2 = React.useMemo(() => {
-    const data = SampleParsedData[example];
-    const nodes = Object.values(data.nodeDict).map((n) => ({
-      ...n,
-      pos: new Vector3().random().multiplyScalar(1),
-      force: new Vector3(),
-    }));
+    const sim = PhysicalMinCut(SampleInputs[example]);
+    return sim;
 
-    const conns = Object.values(data.connDict).map((c) => {
-      const a = nodes.find((n) => n.id === c.a.id);
-      if (!a) throw new Error(`Node not found ${c.a.id}`);
-      const b = nodes.find((n) => n.id === c.b.id);
-      if (!b) throw new Error(`Node not found ${c.b.id}`);
-      return { ...c, a, b };
-    });
+    // const data = SampleParsedData[example];
+    // const nodes = Object.values(data.nodeDict).map((n) => ({
+    //   ...n,
+    //   pos: new Vector3().random().multiplyScalar(1),
+    //   force: new Vector3(),
+    // }));
 
-    // console.log('nodes', nodes);
-    // console.log('conns', conns);
+    // const conns = Object.values(data.connDict).map((c) => {
+    //   const a = nodes.find((n) => n.id === c.a.id);
+    //   if (!a) throw new Error(`Node not found ${c.a.id}`);
+    //   const b = nodes.find((n) => n.id === c.b.id);
+    //   if (!b) throw new Error(`Node not found ${c.b.id}`);
+    //   return { ...c, a, b };
+    // });
 
-    const nodeCombosIter = combinations(nodes, 2);
-    const nodeCombos = Array.from(nodeCombosIter);
-    const forceV = new Vector3();
-    function step(dt: number, cfg: typeof config) {
-      const { force, stiffness, restLength } = cfg;
+    // // console.log('nodes', nodes);
+    // // console.log('conns', conns);
 
-      for (const node of nodeCombos) {
-        const [a, b] = node;
-        const distance = a.pos.distanceTo(b.pos);
-        const repulsiveForce = force / distance ** 2;
-        forceV.copy(a.pos).sub(b.pos).normalize().multiplyScalar(repulsiveForce);
-        a.force.add(forceV);
-        b.force.sub(forceV);
-      }
+    // const nodeCombosIter = combinations(nodes, 2);
+    // const nodeCombos = Array.from(nodeCombosIter);
+    // const forceV = new Vector3();
+    // function step(dt: number, cfg: typeof config) {
+    //   const { force, stiffness, restLength } = cfg;
 
-      for (const conn of conns) {
-        const { a, b } = conn;
-        const distance = a.pos.distanceTo(b.pos);
-        // spring force
-        // const restLength = 10;
-        const extension = distance - restLength;
-        const springForce = stiffness * extension;
-        forceV.copy(a.pos).sub(b.pos).normalize().multiplyScalar(springForce);
-        a.force.sub(forceV);
-        b.force.add(forceV);
-      }
+    //   for (const node of nodeCombos) {
+    //     const [a, b] = node;
+    //     const distance = a.pos.distanceTo(b.pos);
+    //     const repulsiveForce = force / distance ** 2;
+    //     forceV.copy(a.pos).sub(b.pos).normalize().multiplyScalar(repulsiveForce);
+    //     a.force.add(forceV);
+    //     b.force.sub(forceV);
+    //   }
 
-      for (const node of nodes) {
-        node.pos.add(node.force);
-        node.force.set(0, 0, 0);
-      }
-    }
-    return { step, nodes, conns };
+    //   for (const conn of conns) {
+    //     const { a, b } = conn;
+    //     const distance = a.pos.distanceTo(b.pos);
+    //     // spring force
+    //     // const restLength = 10;
+    //     const extension = distance - restLength;
+    //     const springForce = stiffness * extension;
+    //     forceV.copy(a.pos).sub(b.pos).normalize().multiplyScalar(springForce);
+    //     a.force.sub(forceV);
+    //     b.force.add(forceV);
+    //   }
+
+    //   for (const node of nodes) {
+    //     node.pos.add(node.force);
+    //     node.force.set(0, 0, 0);
+    //   }
+    // }
+    // return { step: p, nodes, conns };
   }, [example]);
 
   const { performance } = useControls('Monitoring', {
@@ -97,14 +134,18 @@ function Scene() {
 
   let iter = -1;
   useFrame((_) => {
-    sim2.step(10, config);
+    bench(() => sim2.step(10, config), 'step', true);
+    // const edges = sim2.longestEdges();
+    // const verResult = sim2.verify(edges, config.verifyCB);
+    // if (verResult) console.log('verResult', verResult);
+    // sim2.step(10, config);
     sim2.nodes.forEach((node, i) => {
       const cubeRef = particleMeshRefs.current[i].current;
       if (!cubeRef) {
         console.log('no ref1', particleMeshRefs.current, i);
         return;
       }
-      cubeRef.position.copy(node.pos);
+      cubeRef.position.set(node.pos.x, node.pos.y, 0);
     });
 
     sim2.conns.forEach((conn, i) => {
@@ -117,15 +158,17 @@ function Scene() {
       lineRef.geometry.setPositions([
         a.pos.x,
         a.pos.y,
-        a.pos.z,
+        0, //a.pos.z,
         b.pos.x,
         b.pos.y,
-        b.pos.z,
+        0, //b.pos.z,
       ]);
       const len = a.pos.distanceTo(b.pos);
-      lineRef.material.linewidth = (config.restLength * 2) / a.pos.distanceTo(b.pos);
+      // lineRef.visible = len < 1;
+      lineRef.material.linewidth = 2; //(config.restLength * 2) / a.pos.distanceTo(b.pos);
     });
 
+    springMeshRefs.current[0].current?.geometry;
     return;
   });
 
@@ -158,6 +201,7 @@ function Scene() {
             <Point
               key={i}
               position={new Vector3().random().multiplyScalar(1)}
+              size={0.01}
               ref={ref}
             />
           );
@@ -169,6 +213,7 @@ function Scene() {
         );
       })} */}
       {springMeshRefs.current.map((ref, i) => {
+        // return null;
         return (
           <Line
             key={i}

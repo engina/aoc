@@ -95,7 +95,6 @@ function guardMove(grid: Grid): "out" | "hit" {
   const guard = guardGetVector(grid);
   const steps = gridGetLingOfSight(grid, guard) + 1;
   grid[guard.pos[1]][guard.pos[0]] = "X";
-  console.log({ guard, steps });
   for (let i = 0; i < steps; i++) {
     const [x, y] = guard.pos;
     let x2 = x;
@@ -114,13 +113,12 @@ function guardMove(grid: Grid): "out" | "hit" {
         x2++;
         break;
     }
+
     if (y2 < 0 || y2 >= grid.length || x2 < 0 || x2 >= grid[y2].length) {
-      console.log("out");
       return "out";
     }
-    console.log("testing", x2, y2, grid[y2][x2]);
+
     if (grid[y2][x2] === "#") {
-      console.log("hit");
       guardRotateRight(grid, guard);
       return "hit";
     }
@@ -137,9 +135,12 @@ function printGrid(grid: Grid) {
   }
 }
 
-while (guardMove(grid) !== "out") {
-  printGrid(grid);
-}
+import { bench } from "../../lib";
+bench(() => {
+  while (guardMove(grid) !== "out") {
+    // printGrid(grid);
+  }
+}, "solved");
 
 function gridCountCovered(grid: Grid): number {
   let count = 0;
