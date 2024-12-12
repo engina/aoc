@@ -1,5 +1,4 @@
 import fs from "fs";
-import { amemo, FileCacheStore } from "amemo";
 import { bench } from "../../lib";
 
 type Rule = {
@@ -30,7 +29,13 @@ const rules: Rule[] = [
   },
 ];
 
+const cache: Record<string, number> = {};
+
 function walk(input: string, iterations = 6) {
+  const key = `${input}:${iterations}`;
+  if (key in cache) {
+    return cache[key];
+  }
   if (iterations === 0) {
     // no more iterations, just return 1, as this is the single end stone of this path
     return 1;
@@ -43,35 +48,18 @@ function walk(input: string, iterations = 6) {
 
   let sum = 0;
   for (const g of generated) {
-    sum += cachedWalk(g, iterations - 1);
+    sum += walk(g, iterations - 1);
   }
 
+  cache[key] = sum;
   return sum;
 }
-
-// Instead of a custom cache implementation, I'll just use a memoization
-// library that I wrote
-
-// Current FileCacheStore implementation is synchronous, so it's slow by
-// itself. I'll disable autoSave and save the cache at the end of the
-const cacheStore = new FileCacheStore({
-  autoSave: false,
-});
-
-const cachedWalk = amemo(walk, {
-  cacheStore,
-});
-
-process.on("exit", () => {
-  console.log("Saving cache");
-  cacheStore.save();
-});
 
 function run(input: string, load = 1) {
   return input
     .trim()
     .split(" ")
-    .map((stone) => cachedWalk(stone, load))
+    .map((stone) => walk(stone, load))
     .reduce((acc, curr) => acc + curr, 0);
 }
 
