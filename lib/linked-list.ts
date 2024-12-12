@@ -4,23 +4,27 @@ export class Node<T> {
     this.next = node;
   }
 
-  public toArray(): Node<T>[] {
-    const result: Node<T>[] = [];
-    let current: Node<T> | undefined = this;
-    while (current) {
-      result.push(current);
-      current = current.next;
-    }
-    return result;
-  }
-
-  public walk(
-    cb: (n: Node<T>, path: Node<T>[], root: Node<T>) => Node<T> | undefined
+  public walk<P>(
+    cb: (
+      n: Node<T>,
+      payload: P | undefined,
+      root: Node<T>
+    ) => Node<T> | undefined,
+    payload?: P
   ) {
     let current: Node<T> | undefined = this;
     while (current) {
-      const next = cb(current, this);
+      const next = cb(current, payload, this);
       current = next;
     }
+  }
+
+  public toArray(): Node<T>[] {
+    const result: Node<T>[] = [];
+    this.walk((n) => {
+      result.push(n);
+      return n.next;
+    });
+    return result;
   }
 }

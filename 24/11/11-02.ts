@@ -1,89 +1,89 @@
-import { Node } from "../../lib/linked-list";
+import fs from "fs";
+import { amemo, FileCacheStore } from "amemo";
 import { bench } from "../../lib";
 
-import fs from "fs";
-// const input = fs.readFileSync("input.txt", "utf-8");
-const input = `125 17`;
-
-const nodes = input
-  .trim()
-  .split(" ")
-  .map((t) => new Node(t));
-
-nodes.forEach((n, i) => {
-  if (i === nodes.length - 1) return;
-  n.next = nodes[i + 1];
-});
-
 type Rule = {
-  applies: (n: Node<string>) => boolean;
-  transform: (n: Node<string>) => Node<string> | undefined;
+  applies: (n: string) => boolean;
+  transform: (n: string) => string[];
 };
 
 const rules: Rule[] = [
   {
-    applies: (n) => n.value === "0",
+    applies: (n) => n === "0",
     transform: (n) => {
-      n.value = "1";
-      return n;
+      return ["1"];
     },
   },
   {
-    applies: (n) => n.value.length % 2 === 0,
+    applies: (n) => n.length % 2 === 0,
     transform: (n) => {
-      const left = n.value.slice(0, n.value.length / 2);
-      const right = parseInt(n.value.slice(n.value.length / 2), 10).toString();
-      console.log(
-        "splitting",
-        n.value,
-        "into",
-        left,
-        right,
-        "next",
-        n.next?.value
-      );
-      const nn = n.next;
-      n.value = left;
-      n.next = new Node(right, n.next);
-      return n.next;
+      const left = n.slice(0, n.length / 2);
+      const right = parseInt(n.slice(n.length / 2), 10).toString();
+      return [left, right];
     },
   },
   {
     applies: (n) => true,
     transform: (n) => {
-      n.value = (parseInt(n.value, 10) * 2024).toString();
-      return n.next;
+      return [(parseInt(n, 10) * 2024).toString()];
     },
   },
 ];
 
-function nodesPrint(node: Node<string>) {
-  let result = node.value;
-  node.next?.walk((n) => {
-    result += " -> " + n.value;
-    return n.next;
-  });
-  console.log(result);
+function walk(input: string, iterations = 6) {
+  if (iterations === 0) {
+    // no more iterations, just return 1, as this is the single end stone of this path
+    return 1;
+  }
+
+  const generated = rules.find((r) => r.applies(input))?.transform(input);
+  if (!generated) {
+    throw new Error(`No rule found for ${input}`);
+  }
+
+  let sum = 0;
+  for (const g of generated) {
+    sum += cachedWalk(g, iterations - 1);
+  }
+
+  return sum;
 }
 
-let j = 0;
-bench(() => {
-  for (let i = 0; i < 6; i++) {
-    console.log("iter", i);
-    nodes[0].walk((n) => {
-      console.log("  walking", n.value, "then", n.next?.value);
-      const next = rules.find((r) => r.applies(n))?.transform(n);
-      console.log(
-        "    new value",
-        n.value,
-        "next",
-        next?.value,
-        "next next",
-        next?.next?.value
-      );
-      // if (j++ > 20) process.exit(0);
-      return next;
-    });
-    nodesPrint(nodes[0]);
-  }
-}, "walk");
+// Instead of a custom cache implementation, I'll just use a memoization
+// library that I wrote
+
+// Current FileCacheStore implementation is synchronous, so it's slow by
+// itself. I'll disable autoSave and save the cache at the end of the
+const cacheStore = new FileCacheStore({
+  autoSave: false,
+});
+
+const cachedWalk = amemo(walk, {
+  cacheStore,
+});
+
+process.on("exit", () => {
+  console.log("Saving cache");
+  cacheStore.save();
+});
+
+function run(input: string, load = 1) {
+  return input
+    .trim()
+    .split(" ")
+    .map((stone) => cachedWalk(stone, load))
+    .reduce((acc, curr) => acc + curr, 0);
+}
+
+function main(inputPath: string = "input.txt", load = 1) {
+  const input = fs.readFileSync(inputPath, "utf-8");
+  bench(() => {
+    const result = run(input, load);
+    // print this humongous number as a string without scientific notation
+    const resultBI = BigInt(result);
+    console.log(resultBI.toString());
+  }, "walk");
+}
+
+main(process.argv[2], 25);
+main(process.argv[2], 75);
