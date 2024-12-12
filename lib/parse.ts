@@ -1,3 +1,5 @@
+import { Grid } from "./grid";
+
 export type ParseTransform<V> = (
   valueStr: string,
   values: string[],
@@ -49,4 +51,19 @@ export function parseArr<V = string>(
       const tokens = line.split("");
       return tokens.map((token) => transform(token, tokens, line));
     });
+}
+
+export function parseGrid<V = string>(
+  inputs: string,
+  transform: ParseTransform<V> = Transformers.string
+): Grid<V> {
+  return new Grid(
+    inputs
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => {
+        const tokens = line.split("");
+        return tokens.map((token) => transform(token, tokens, line));
+      })
+  );
 }

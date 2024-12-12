@@ -31,11 +31,14 @@ const rules: Rule[] = [
 
 const cache: Record<string, number> = {};
 
-function walk(input: string, iterations = 6) {
+// walks a single stone through the rules for a given number of iterations
+// returns the number of end stones
+function walk(input: string, iterations) {
   const key = `${input}:${iterations}`;
   if (key in cache) {
     return cache[key];
   }
+
   if (iterations === 0) {
     // no more iterations, just return 1, as this is the single end stone of this path
     return 1;
@@ -47,6 +50,7 @@ function walk(input: string, iterations = 6) {
   }
 
   let sum = 0;
+
   for (const g of generated) {
     sum += walk(g, iterations - 1);
   }
@@ -63,15 +67,18 @@ function run(input: string, load = 1) {
     .reduce((acc, curr) => acc + curr, 0);
 }
 
-function main(inputPath: string = "input.txt", load = 1) {
-  const input = fs.readFileSync(inputPath, "utf-8");
-  bench(() => {
-    const result = run(input, load);
-    // print this humongous number as a string without scientific notation
-    const resultBI = BigInt(result);
-    console.log(resultBI.toString());
-  }, "walk");
+function part1(input: string) {
+  return run(input, 25);
 }
 
-main(process.argv[2], 25);
-main(process.argv[2], 75);
+function part2(input: string) {
+  return run(input, 75);
+}
+
+function main(inputPath = "input.txt") {
+  const input = fs.readFileSync(inputPath, "utf-8");
+  bench(() => console.log("part1: ", part1(input)), "part1");
+  bench(() => console.log("part2: ", part2(input)), "part2");
+}
+
+main(process.argv[2]);
