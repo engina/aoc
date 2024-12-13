@@ -59,26 +59,10 @@ function walk(input: string, iterations) {
   return sum;
 }
 
-function run(input: string, load = 1) {
+export function run(input: string, load = 1) {
   return input
     .trim()
     .split(" ")
     .map((stone) => walk(stone, load))
     .reduce((acc, curr) => acc + curr, 0);
 }
-
-function part1(input: string) {
-  return run(input, 25);
-}
-
-function part2(input: string) {
-  return run(input, 75);
-}
-
-function main(inputPath = "input.txt") {
-  const input = fs.readFileSync(inputPath, "utf-8");
-  bench(() => console.log("part1: ", part1(input)), "part1");
-  bench(() => console.log("part2: ", part2(input)), "part2");
-}
-
-main(process.argv[2]);

@@ -1,5 +1,23 @@
 export type Vector = [number, number];
 
+export class Vector2 {
+  constructor(public x: number, public y: number) {}
+
+  add(vector: Vector): Vector2 {
+    this.x += vector[0];
+    this.y += vector[1];
+    return this;
+  }
+
+  isEqual(vector: Vector): boolean {
+    return this.x === vector[0] && this.y === vector[1];
+  }
+
+  toString(): string {
+    return `(${this.x}, ${this.y})`;
+  }
+}
+
 export const Directions: Record<string, Vector> = {
   north: [0, -1],
   south: [0, 1],

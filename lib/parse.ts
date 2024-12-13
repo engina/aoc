@@ -40,6 +40,35 @@ export function parseDict<K = string, V = string>(
   return dict;
 }
 
+export type TransformKey<R> = (input: string) => R;
+export type TransformValues<R> = (input: string) => R[];
+
+export type ParseDictOpts<K, V> = {
+  transformKey?: TransformKey<K>;
+  transformValues?: TransformValues<V>;
+};
+
+export function parseDict2<K = string, V = string>(
+  inputs: string,
+  opts: ParseDictOpts<K, V> = {}
+): [K, V[]][] {
+  const {
+    transformKey = Transformers.string,
+    transformValues = Transformers.string,
+  } = opts;
+  const dict: [K, V[]][] = [];
+  inputs
+    .split("\n")
+    .filter(Boolean)
+    .forEach((line) => {
+      const [_id, _rest] = line.split(":").map((s) => s.trim());
+      const id = transformKey(_id);
+      const rest = transformValues(_rest);
+      dict.push([id, rest]);
+    });
+  return dict;
+}
+
 export function parseArr<V = string>(
   inputs: string,
   transform: ParseTransform<V> = Transformers.string
