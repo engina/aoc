@@ -13,6 +13,30 @@ export class Vector2 {
     return this.x === vector[0] && this.y === vector[1];
   }
 
+  m() {
+    return this.y / this.x;
+  }
+
+  len() {
+    return Math.sqrt(this.x ** 2 + this.y ** 2);
+  }
+
+  addScalar(scalar: number): Vector2 {
+    this.x += scalar;
+    this.y += scalar;
+    return this;
+  }
+
+  mulScalar(scalar: number): Vector2 {
+    this.x *= scalar;
+    this.y *= scalar;
+    return this;
+  }
+
+  clone(): Vector2 {
+    return new Vector2(this.x, this.y);
+  }
+
   toString(): string {
     return `(${this.x}, ${this.y})`;
   }
