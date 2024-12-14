@@ -1,6 +1,6 @@
-import fs, { Dirent } from "fs";
+// import fs, { Dirent } from "fs";
 
-const input = fs.readFileSync("input.txt", "utf8");
+// const input = fs.readFileSync("input.txt", "utf8");
 
 // const input = `....#.....
 // .........#
@@ -17,12 +17,12 @@ const input = fs.readFileSync("input.txt", "utf8");
 type Vector2 = [number, number];
 type Direction = "^" | "v" | "<" | ">";
 type GuardVector = { pos: Vector2; dir: Direction };
-type Grid = string[][];
+export type Grid = string[][];
 
-const grid: Grid = input
-  .split("\n")
-  .filter(Boolean)
-  .map((l) => l.split(""));
+// const grid: Grid = input
+//   .split("\n")
+//   .filter(Boolean)
+//   .map((l) => l.split(""));
 
 function guardGetVector(grid: Grid): GuardVector {
   // guard characters are '^', 'v', '<', '>'
@@ -135,13 +135,6 @@ function printGrid(grid: Grid) {
   }
 }
 
-import { bench } from "../../lib";
-bench(() => {
-  while (guardMove(grid) !== "out") {
-    // printGrid(grid);
-  }
-}, "solved");
-
 function gridCountCovered(grid: Grid): number {
   let count = 0;
   for (const row of grid) {
@@ -154,4 +147,9 @@ function gridCountCovered(grid: Grid): number {
   return count;
 }
 
-console.log(gridCountCovered(grid));
+export function run(grid: Grid) {
+  while (guardMove(grid) !== "out") {
+    // printGrid(grid);
+  }
+  return gridCountCovered(grid).toString();
+}

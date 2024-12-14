@@ -1,6 +1,3 @@
-import fs from "fs";
-import { bench } from "../../lib";
-
 type Rule = {
   applies: (n: string) => boolean;
   transform: (n: string) => string[];
@@ -59,10 +56,8 @@ function walk(input: string, iterations) {
   return sum;
 }
 
-export function run(input: string, load = 1) {
+export function run(input: string[], load = 1) {
   return input
-    .trim()
-    .split(" ")
     .map((stone) => walk(stone, load))
     .reduce((acc, curr) => acc + curr, 0);
 }

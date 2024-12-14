@@ -1,28 +1,28 @@
-import fs from "fs";
+// import fs from "fs";
 
-// const input = fs.readFileSync("input.txt", "utf8");
+// // const input = fs.readFileSync("input.txt", "utf8");
 
-const input = `....#.....
-.........#
-..........
-..#.......
-.......#..
-..........
-.#..^.....
-........#.
-#.........
-......#...
-`;
+// const input = `....#.....
+// .........#
+// ..........
+// ..#.......
+// .......#..
+// ..........
+// .#..^.....
+// ........#.
+// #.........
+// ......#...
+// `;
 
 type Vector2 = [number, number];
 type Direction = "^" | "v" | "<" | ">";
 type GuardVector = { pos: Vector2; dir: Direction };
 type Grid = string[][];
 
-const gridInit: Grid = input
-  .split("\n")
-  .filter(Boolean)
-  .map((l) => l.split(""));
+// const gridInit: Grid = input
+//   .split("\n")
+//   .filter(Boolean)
+//   .map((l) => l.split(""));
 
 const grid = structuredClone(gridInit);
 
@@ -71,7 +71,7 @@ function gridGetLingOfSight(grid: Grid, guardVector: GuardVector): string[] {
   return result;
 }
 
-function guardRotateRight(grid: Grid, guard: GuardVector) : GuardVector{
+function guardRotateRight(grid: Grid, guard: GuardVector): GuardVector {
   const [x, y] = guard.pos;
   const ret = structuredClone(guard);
   switch (guard.dir) {
@@ -195,6 +195,7 @@ const prospects = gridNewObstacleProspects(grid).filter(
 console.log("prospects", prospects.length, prospects);
 
 import readline from "readline";
+
 function waitForKeyPress() {
   return new Promise((resolve) => {
     const rl = readline.createInterface({
@@ -209,30 +210,33 @@ function waitForKeyPress() {
   });
 }
 
-const loopObstacle: Vector2[] = [];
-[[3, 6]].forEach(async ([x, y]) => {
-  const newGrid = structuredClone(gridInit);
-  console.log("Placing obstacle at", x, y);
-  newGrid[y][x] = "#";
+export function run() {
+  const loopObstacle: Vector2[] = [];
+  [[3, 6]].forEach(async ([x, y]) => {
+    const newGrid = structuredClone(gridInit);
+    console.log("Placing obstacle at", x, y);
+    newGrid[y][x] = "#";
 
-  // while (
-  //   (guardMove(newGrid) & (GuardMoveResult.OUT | GuardMoveResult.LOOP)) ===
-  //   0
-  // ) {}
-  let result: GuardMoveResult;
-  do {
-    // block until a key press, then continue so that we can see iterations
-    await waitForKeyPress();
-    result = guardMove(newGrid);
-    printGrid(newGrid);
-  } while (result !== GuardMoveResult.LOOP && result !== GuardMoveResult.OUT);
+    // while (
+    //   (guardMove(newGrid) & (GuardMoveResult.OUT | GuardMoveResult.LOOP)) ===
+    //   0
+    // ) {}
+    let result: GuardMoveResult;
+    do {
+      // block until a key press, then continue so that we can see iterations
+      await waitForKeyPress();
+      result = guardMove(newGrid);
+      printGrid(newGrid);
+    } while (result !== GuardMoveResult.LOOP && result !== GuardMoveResult.OUT);
 
-  if (result === GuardMoveResult.LOOP) {
-    loopObstacle.push([x, y]);
-  }
-  console.log("result");
-});
+    if (result === GuardMoveResult.LOOP) {
+      loopObstacle.push([x, y]);
+    }
+    console.log("result");
+  });
 
-console.log("loopObstacle", JSON.stringify(loopObstacle, null, 2));
-console.log("loopObstacle", loopObstacle.length);
-// 2634
+  console.log("loopObstacle", JSON.stringify(loopObstacle, null, 2));
+  console.log("loopObstacle", loopObstacle.length);
+  // 2634
+  return gridCountCovered(grid).toString();
+}

@@ -1,7 +1,3 @@
-import fs from "fs";
-const input = fs.readFileSync("input.txt", "utf8").trim();
-// const input = `2333133121414131402`;
-
 function layout(input: string): string[] {
   let result: string[] = [];
   let id = 0;
@@ -70,16 +66,9 @@ function checksum(layout: string[], isDefragged = false): number {
   return sum;
 }
 
-const bench = <R>(fn: () => R, label?: string) => {
-  const start = performance.now();
-  const result = fn();
-  const elapsed = performance.now() - start;
-  console.log(`[${label ?? "Bench"}] took: ${elapsed.toFixed(2)}ms`);
-  return result;
-};
-
-const l = bench(() => layout(input), "layoutting");
-const d = bench(() => defrag(l), "defragging");
-const c = bench(() => checksum(d, true), "checksumming");
-
-console.log(c);
+export function run(input: string) {
+  const l = layout(input);
+  const d = defrag(l);
+  const c = checksum(d, true);
+  return c;
+}

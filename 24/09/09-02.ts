@@ -1,10 +1,3 @@
-import fs from "fs";
-import assert from "assert";
-
-const input = fs.readFileSync("input.txt", "utf8").trim();
-
-// const input = `2333133121414131402`;
-
 class Node<T> {
   constructor(
     public payload: T,
@@ -242,10 +235,9 @@ function checksumList(blockList: List<Block>) {
   return sum;
 }
 
-import { bench } from "../../lib";
-
-let l = bench(() => layout(input), "layoutting");
-const d = bench(() => defrag(l), "defragging");
-const c = bench(() => checksumList(d), "checksumming");
-
-console.log(c);
+export function run(input: string) {
+  const l = layout(input);
+  const d = defrag(l);
+  const c = checksumList(d);
+  return c;
+}

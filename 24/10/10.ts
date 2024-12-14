@@ -1,24 +1,9 @@
-import { parseArr } from "../../lib/parse";
 import "colors";
-import fs from "fs";
+import { bench } from "../../lib";
 
-const DEBUG = true;
-
-const input = fs.readFileSync("input.txt", "utf-8");
+const DEBUG = false;
 
 const debug = DEBUG ? (...args: any[]) => console.log(...args) : () => {};
-
-// const input = `89010123
-// 78121874
-// 87430965
-// 96549874
-// 45678903
-// 32019012
-// 01329801
-// 10456732
-// `;
-
-const data = parseArr(input);
 
 type SummitPath = Cell[];
 
@@ -142,39 +127,40 @@ class Map {
   }
 }
 
-const map = new Map(data);
+export function run(data: string[][]) {
+  const map = new Map(data);
+  const walks = map.findAll("0").map((cell) => cell.walk());
 
-const walks = map.findAll("0").map((cell) => cell.walk());
+  const summits = walks
+    .map((w) => w.uniqueSummits.size)
+    .reduce((acc, curr) => acc + curr, 0);
 
-const summits = walks
-  .map((w) => w.uniqueSummits.size)
-  .reduce((acc, curr) => acc + curr, 0);
+  const totalTrails = walks
+    .map((w) => w.summitPaths.length)
+    .reduce((acc, curr) => acc + curr, 0);
 
-const totalTrails = walks
-  .map((w) => w.summitPaths.length)
-  .reduce((acc, curr) => acc + curr, 0);
+  walks.forEach((w) => summitsPrint(w.summitPaths.flat()));
+  return { summits, totalTrails };
 
-walks.forEach((w) => summitsPrint(w.summitPaths.flat()));
-
-console.log("part1: total summits", summits);
-console.log("part2: total trails", totalTrails);
-
-function summitsPrint(summits: SummitPath) {
-  if (!DEBUG) return;
-  const hline = "+" + "-".repeat(map.width) + "+";
-  debug(hline);
-  for (let y = 0; y < map.height; y++) {
-    process.stdout.write("|");
-    for (let x = 0; x < map.width; x++) {
-      const cell = map.get(new Vector2(x, y))!;
-      const isVisited = summits.some((summit) => summit === cell);
-      if (!isVisited) {
-        process.stdout.write(cell.height.toString());
-      } else {
-        process.stdout.write(cell.height.toString().green);
+  console.log("part1: total summits", summits);
+  console.log("part2: total trails", totalTrails);
+  function summitsPrint(summits: SummitPath) {
+    if (!DEBUG) return;
+    const hline = "+" + "-".repeat(map.width) + "+";
+    debug(hline);
+    for (let y = 0; y < map.height; y++) {
+      process.stdout.write("|");
+      for (let x = 0; x < map.width; x++) {
+        const cell = map.get(new Vector2(x, y))!;
+        const isVisited = summits.some((summit) => summit === cell);
+        if (!isVisited) {
+          process.stdout.write(cell.height.toString());
+        } else {
+          process.stdout.write(cell.height.toString().green);
+        }
       }
+      process.stdout.write("|\n");
     }
-    process.stdout.write("|\n");
+    debug(hline);
   }
-  debug(hline);
 }

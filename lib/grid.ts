@@ -3,13 +3,13 @@ export type Vector = [number, number];
 export class Vector2 {
   constructor(public x: number, public y: number) {}
 
-  add(vector: Vector): Vector2 {
-    this.x += vector[0];
-    this.y += vector[1];
+  add(vector: Vector2): Vector2 {
+    this.x += vector.x;
+    this.y += vector.y;
     return this;
   }
 
-  isEqual(vector: Vector): boolean {
+  isEqual(vector: Vector2): boolean {
     return this.x === vector[0] && this.y === vector[1];
   }
 
@@ -106,5 +106,12 @@ export class Grid<T> {
       return undefined;
     }
     return this.cells[y * this.width + x];
+  }
+
+  getRect(x: number, y: number, width: number, height: number): Grid<T> {
+    const data = this.data
+      .slice(y, y + height)
+      .map((row) => row.slice(x, x + width));
+    return new Grid(data);
   }
 }

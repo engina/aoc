@@ -1,10 +1,6 @@
-import fs from "fs";
 import "colors";
 import colors from "colors";
 import { combinations } from "../../lib";
-import { parseArr } from "../../lib/parse";
-
-const input = fs.readFileSync("input.txt", "utf8");
 // const input = `............
 // ........0...
 // .....0......
@@ -18,8 +14,6 @@ const input = fs.readFileSync("input.txt", "utf8");
 // ............
 // ............
 // `;
-
-const parsed = parseArr(input);
 
 class Canvas {
   public readonly width: number;
@@ -139,7 +133,7 @@ class City {
       }
       resultCanvas.set(x, y, value);
     }
-    resultCanvas.print();
+    // resultCanvas.print();
     return antinodeCount;
   }
 }
@@ -186,6 +180,8 @@ class Vector {
   }
 }
 
-const city = new City(parsed);
-const result = city.compute();
-console.log(result);
+export function run(parsed: string[][]) {
+  const city = new City(parsed);
+  const result = city.compute();
+  return result.toString();
+}

@@ -1,22 +1,35 @@
 import { Day } from "../../main";
-import { run } from "./13";
+import { parse, cost, Machine } from "./13";
 
 export default {
   name: "Claw Contraption",
   year: 24,
   day: 13,
+  setup: (input: string) => parse(input),
   parts: [
     {
-      runner: (input: string) => {
-        return run(input);
+      runner: (machines) => {
+        return machines
+          .map(cost)
+          .filter((c) => c !== null)
+          .reduce((a, b) => a + b, 0)
+          .toString();
       },
-      expected: "",
+      expected: "26005",
     },
     {
-      runner: (input: string) => {
-        return "";
+      runner: (machines) => {
+        return machines
+          .map((m) => ({
+            ...m,
+            prize: m.prize.clone().addScalar(10000000000000),
+          }))
+          .map(cost)
+          .filter((c) => c !== null)
+          .reduce((a, b) => a + b, 0)
+          .toString();
       },
-      expected: "",
+      expected: "105620095782547",
     },
   ],
-} as Day;
+} as Day<Machine[]>;
