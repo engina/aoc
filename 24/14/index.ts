@@ -1,6 +1,6 @@
 import { Vector2 } from "../../lib/grid";
 import { Day } from "../../main";
-import { Robot, run } from "./14";
+import { Robot, run, run2 } from "./14";
 
 export default {
   name: "Restroom Redoubt",
@@ -24,10 +24,10 @@ export default {
       expected: "231782040",
     },
     {
-      runner: (machines) => {
-        return "";
+      runner: (robots) => {
+        return run2(robots, 100, 101, 103);
       },
-      expected: "105620095782547",
+      expected: "6475",
     },
   ],
 } as Day<Robot[]>;

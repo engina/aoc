@@ -63,21 +63,29 @@ export function range(start, end, step = 1) {
 }
 
 import "colors";
-export type BenchOpts = {
+export type BenchOpts<F> = {
   label?: string;
   disablePrint?: boolean;
   runs?: number;
   discard?: number;
+  setup?: () => F; // for generating input to benchmark runner, this is excluded from benchmark time
+  progress?: (i: number) => void;
 };
 
-export const bench = <R>(fn: () => R, opts: BenchOpts = {}) => {
-  const { label = "Bench", disablePrint = false } = opts;
+export const bench = <R, F>(
+  fn: (input: F | undefined) => R,
+  opts: BenchOpts<F> = {}
+) => {
+  const { label = "Bench", disablePrint = false, setup, progress } = opts;
 
   function run() {
+    const setupStart = performance.now();
+    const input = setup?.();
+    const setupElapsed = performance.now() - setupStart;
     const start = performance.now();
-    const result = fn();
+    const result = fn(input);
     const elapsed = performance.now() - start;
-    return { result, elapsed };
+    return { result, elapsed, setup: setupElapsed };
   }
 
   let runs = opts.runs ?? 10;
@@ -91,11 +99,15 @@ export const bench = <R>(fn: () => R, opts: BenchOpts = {}) => {
   }
 
   if (runs - discard * 2 < 2) discard = 0;
-
+  let progressCounter = 0;
   const results = range(0, runs)
-    .map(() => run())
+    .map(() => {
+      const r = run();
+      progress?.(progressCounter++);
+      return r;
+    })
     .sort((a, b) => b.elapsed - a.elapsed);
-
+  process.stdout.write("\b".repeat(runs));
   const max = results[0].elapsed;
   const min = results[runs - 1].elapsed;
   const avg =
@@ -120,3 +132,7 @@ export const bench = <R>(fn: () => R, opts: BenchOpts = {}) => {
     min,
   };
 };
+
+export async function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}

@@ -1,41 +1,12 @@
 import { Vector2 } from "../../lib/grid";
-import fs from "fs";
-const input = fs.readFileSync(__dirname + "/input.txt", "utf-8");
+
 const WIDTH = 101;
 const HEIGHT = 103;
-
-// const input = `p=0,4 v=3,-3
-// p=6,3 v=-1,-3
-// p=10,3 v=-1,2
-// p=2,0 v=2,-1
-// p=0,0 v=1,3
-// p=3,0 v=-2,-2
-// p=7,6 v=-1,-3
-// p=3,0 v=-1,-2
-// p=9,3 v=2,3
-// p=7,3 v=-1,2
-// p=2,4 v=2,-3
-// p=9,5 v=-3,-3
-// `;
-// const WIDTH = 11;
-// const HEIGHT = 7;
 
 export type Robot = {
   position: Vector2;
   velocity: Vector2;
 };
-
-const parsed: Robot[] = input
-  .split("\n")
-  .filter(Boolean)
-  .map((line) => {
-    const [p, v] = line.split(" ");
-    const [px, py] = p.slice(2).split(",").map(Number);
-    const [vx, vy] = v.slice(2).split(",").map(Number);
-    return { position: new Vector2(px, py), velocity: new Vector2(vx, vy) };
-  });
-
-const duration = 100;
 
 function mod(n, m) {
   return ((n % m) + m) % m;
@@ -70,6 +41,19 @@ function printGrid(moved: Vector2[]) {
   for (let y = 0; y < HEIGHT; y++) {
     let row = "";
     for (let x = 0; x < WIDTH; x++) {
+      // show quadrants
+      if (x === Math.floor(WIDTH / 2) && y === Math.floor(HEIGHT / 2)) {
+        row += "+";
+        continue;
+      }
+      if (x === Math.floor(WIDTH / 2)) {
+        row += "|";
+        continue;
+      }
+      if (y === Math.floor(HEIGHT / 2)) {
+        row += "-";
+        continue;
+      }
       const found = moved.filter((m) => m.x === x && m.y === y);
       row += found.length > 0 ? found.length.toString() : ".";
     }
@@ -98,4 +82,30 @@ export function run(
     .filter(stripRobotsFromAxes);
   const quadrants = quadrantCount(robotsMoved, width, height);
   return quadrants.reduce((acc, q) => acc * q, 1).toString();
+}
+
+export function run2(
+  robots: Robot[],
+  duration: number,
+  width: number,
+  height: number
+) {
+  // printGrid(robots.map(({ position }) => position));
+  let thunkMax = 0;
+  const center = Math.floor(width / 2);
+  const sqr = 30;
+  for (let i = 0; i < 100000; i++) {
+    const robotsMoved = robots.map((r) => move(r, i));
+    const thunk = robotsMoved.filter(
+      (v) => Math.abs(v.x - center) < sqr && Math.abs(v.y - center) < sqr
+    ).length;
+    if (thunk > thunkMax) {
+      thunkMax = thunk;
+    }
+
+    if (thunk > 300) {
+      return i.toString();
+    }
+  }
+  return "";
 }

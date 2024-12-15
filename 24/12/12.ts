@@ -79,7 +79,7 @@ export function study(group: Cell<string>[]) {
       const neighbor = neighbors[i];
       if (neighbor === undefined || neighbor.value !== cell.value) {
         fences.push({
-          position: cell.position,
+          position: [cell.position.x, cell.position.y],
           side: sides[i],
           group: -1,
         });

@@ -1,13 +1,10 @@
 import { bench, combinations } from "../../../lib";
 import * as THREE from "three";
 import { parseDict } from "../../../lib/parse";
-import { SampleInputs } from "../sample-data";
 
 function vectorFactory() {
   return new THREE.Vector2();
 }
-
-const input = SampleInputs[0];
 
 class ConnectionFactory {
   public readonly all: Record<string, Connection> = {};
@@ -112,68 +109,85 @@ export interface Config<R> {
   restLength: number;
 }
 
-export function PhysicalMinCut(input: string) {
-  const data = parseDict(input);
-  const nodeFactory = new NodeFactory();
-  const connFactory = new ConnectionFactory();
+export function setup(input: string) {
+  return new PhysicalMinCut(input);
+}
 
-  data.forEach(([id, nextIds]) => {
-    nextIds.forEach((nextId) => {
-      connFactory.create(id, nextId, nodeFactory);
+export class PhysicalMinCut {
+  public data: [string, string[]][];
+  public nodeFactory = new NodeFactory();
+  public connFactory = new ConnectionFactory();
+  public nodes: Node[] = [];
+  public conns: Connection[] = [];
+  public nodeCombos: [Node, Node][] = [];
+  private forceV = vectorFactory();
+  constructor(input: string) {
+    this.data = parseDict(input);
+    this.data.forEach(([id, nextIds]) => {
+      nextIds.forEach((nextId) => {
+        this.connFactory.create(id, nextId, this.nodeFactory);
+      });
     });
-  });
-  const nodes = Object.values(nodeFactory.all);
-  const conns = Object.values(connFactory.all);
+    this.nodes = Object.values(this.nodeFactory.all);
+    this.conns = Object.values(this.connFactory.all);
 
-  const nodeCombosIter = combinations(nodes, 2);
-  const nodeCombos = Array.from(nodeCombosIter);
+    const nodeCombosIter = combinations(this.nodes, 2);
+    this.nodeCombos = Array.from(nodeCombosIter) as [Node, Node][];
 
-  const rnd = new THREE.Vector3(1, 2, 3).normalize();
-  nodes.forEach((node, i) => {
-    // rotate the rnd vector around the very center and add it to the node position
-    node.pos.add(rnd.clone().applyAxisAngle(new THREE.Vector3(0, 0, 1), i));
-  });
+    const rnd = new THREE.Vector3(1, 2, 3).normalize();
 
-  const forceV = vectorFactory();
-
-  function step<R>(dt: number, cfg: Config<R>) {
+    // randomize the initial positions -- this has impact on how many iterations are needed
+    this.nodes.forEach((node, i) => {
+      // rotate the rnd vector around the very center and add it to the node position
+      node.pos.add(rnd.clone().applyAxisAngle(new THREE.Vector3(0, 0, 1), i));
+    });
+  }
+  step<R>(dt: number, cfg: Config<R>) {
     const { force, stiffness, restLength } = cfg;
 
-    for (const node of nodeCombos) {
+    for (const node of this.nodeCombos) {
       const [a, b] = node;
       const distance = a.pos.distanceTo(b.pos);
       const repulsiveForce = force / distance ** 2;
-      forceV.copy(a.pos).sub(b.pos).normalize().multiplyScalar(repulsiveForce);
-      a.force.add(forceV);
-      b.force.sub(forceV);
+      this.forceV
+        .copy(a.pos)
+        .sub(b.pos)
+        .normalize()
+        .multiplyScalar(repulsiveForce);
+      a.force.add(this.forceV);
+      b.force.sub(this.forceV);
     }
 
-    for (const conn of conns) {
+    for (const conn of this.conns) {
       const { a, b } = conn;
       const distance = a.pos.distanceTo(b.pos);
       const extension = distance - restLength;
       const springForce = stiffness * extension;
-      forceV.copy(a.pos).sub(b.pos).normalize().multiplyScalar(springForce);
-      a.force.sub(forceV);
-      b.force.add(forceV);
+      this.forceV
+        .copy(a.pos)
+        .sub(b.pos)
+        .normalize()
+        .multiplyScalar(springForce);
+      a.force.sub(this.forceV);
+      b.force.add(this.forceV);
     }
 
     let i = 0;
-    for (const node of nodes) {
-      node.pos.add(node.force.multiplyScalar(0.000001));
+    for (const node of this.nodes) {
+      node.pos.add(node.force);
       node.force.set(0, 0);
     }
   }
 
-  function longestEdges(top = 3) {
-    const sorted = conns.sort((a, b) => {
+  longestEdges(top = 3) {
+    const sorted = this.conns.sort((a, b) => {
       return a.a.pos.distanceTo(a.b.pos) - b.a.pos.distanceTo(b.b.pos);
     });
 
     return sorted.slice(-top);
   }
 
-  function verify<R>(cuts: Connection[], cb: VerifyCallback<R>): R | false {
+  verify<R>(cuts: Connection[], cb: VerifyCallback<R>): R | false {
     const nodesOfInterest: Node[] = [];
     for (const conn of cuts) {
       conn.cut = true;
@@ -188,7 +202,7 @@ export function PhysicalMinCut(input: string) {
     });
 
     const networkSizes: Record<string, number> = {};
-    nodes.forEach((node) => {
+    this.nodes.forEach((node) => {
       if (!networkSizes[node.network]) {
         networkSizes[node.network] = 0;
       }
@@ -201,7 +215,7 @@ export function PhysicalMinCut(input: string) {
     return cb(networkSizes);
   }
 
-  function run<R>(cfg: Config<R>):
+  run<R>(cfg: Config<R>):
     | (R & {
         nodes: Node[];
         conns: Connection[];
@@ -212,68 +226,53 @@ export function PhysicalMinCut(input: string) {
     const { maxIter, edges, verifyCB, skipVerificationFor } = cfg;
 
     for (let i = 0; i < maxIter; i++) {
-      bench(() => step(1, cfg), "step", true);
-
-      const result = bench(
-        () => longestEdges(edges),
-        "longestConnections",
-        true
-      );
+      this.step(1, cfg);
+      if (i < skipVerificationFor) continue;
+      const result = this.longestEdges(edges);
 
       let ver: false | R = false;
 
-      if (i > skipVerificationFor)
-        ver = bench(() => verify(result, verifyCB), "verify");
+      ver = this.verify(result, verifyCB);
 
       if (ver) {
-        return { ...ver, nodes, conns, result, iter: i };
+        // console.log("Found in", i, "iterations");
+        return {
+          ...ver,
+          nodes: this.nodes,
+          conns: this.conns,
+          result,
+          iter: i,
+        };
       }
     }
     return false;
   }
-
-  return {
-    run,
-    step,
-    verify,
-    longestEdges,
-    nodes,
-    conns,
-  };
 }
 
-// const f = PhysicalMinCut(SampleInputs[0]);
+const config: Config<{
+  networks: Record<string, number>;
+  mul: number;
+}> = {
+  maxIter: 100,
+  skipVerificationFor: 20,
+  verifyCB: (networks) => {
+    const sizes = Object.values(networks);
+    if (sizes.length !== 2) return false;
+    return {
+      networks,
+      mul: sizes.reduce((acc, s) => acc * s, 1),
+    };
+  },
+  edges: 3,
+  force: 50,
+  stiffness: 0.1,
+  restLength: 5,
+};
 
-// const config: Config<{
-//   networks: Record<string, number>;
-//   mul: number;
-// }> = {
-//   maxIter: 1000,
-//   skipVerificationFor: 20,
-//   verifyCB: (networks) => {
-//     const sizes = Object.values(networks);
-//     if (sizes.length !== 2) return false;
-//     return {
-//       networks,
-//       mul: sizes.reduce((acc, s) => acc * s, 1),
-//     };
-//   },
-//   edges: 3,
-//   force: 10,
-//   stiffness: 0.1,
-//   restLength: 10,
-// };
-
-// const runResult = bench(() => f.run(config), "run");
-
-// if (runResult) {
-//   const { nodes, mul, result, iter } = runResult;
-//   console.log(
-//     `Found a configuration that meets the criteria in ${iter} steps`,
-//     result.map((r) => r.toString()).join(", ")
-//   );
-
-//   const totalNodes = nodes.length;
-//   console.log("Total nodes", totalNodes);
-//   console.log("Visited * Remaining", mul);
-// }
+export function part1(mincut: PhysicalMinCut) {
+  const result = mincut.run(config);
+  if (result) {
+    const { nodes, mul, iter } = result;
+    return mul.toString();
+  }
+}

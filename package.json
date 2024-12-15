@@ -13,7 +13,10 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@commander-js/extra-typings": "^12.1.0",
     "amemo": "../amemo",
-    "colors": "^1.4.0"
+    "colors": "^1.4.0",
+    "commander": "^12.1.0",
+    "three": "^0.171.0"
   }
 }

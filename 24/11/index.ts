@@ -1,5 +1,5 @@
 import { Day } from "../../main";
-import { run } from "./11-02";
+import { run } from "./11";
 
 export default {
   name: "Plutonian Pebbles",

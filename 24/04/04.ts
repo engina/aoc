@@ -1,6 +1,33 @@
 import fs from "fs";
 import assert from "assert";
 
+function* rect(
+  x: number,
+  y: number,
+  w: number,
+  h: number
+): Generator<[number, number]> {
+  for (let i = x; i < x + w; i++) {
+    for (let j = y; j < y + h; j++) {
+      yield [i, j];
+    }
+  }
+}
+
+function* genV2(
+  vs: [[number, number], [number, number]]
+): Generator<[number, number]> {
+  const [[x1, y1], [x2, y2]] = vs;
+  for (let i = x1; i < x2; i++) {
+    for (let j = y1; j < y2; j++) {
+      yield [i, j];
+    }
+  }
+}
+for (const p of rect(0, 0, 3, 3)) {
+  console.log(p);
+}
+
 const started = performance.now();
 const needle = "XMAS";
 
@@ -71,8 +98,6 @@ function print(diag: Vector2[]): void {
 
 const diag1 = diagCreate(WIDTH, HEIGHT);
 const diag2 = diagMirror(diag1);
-
-const diagonals: Vector2[][] = [diag1, diag2];
 
 function diagShift(diag: Vector2[], shiftX: number, shiftY: number): Vector2[] {
   return diag

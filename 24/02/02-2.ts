@@ -1,5 +1,3 @@
-import fs from "fs";
-
 function verify(arr: number[]): boolean {
   let direction: "up" | "down" | undefined;
 
@@ -22,22 +20,20 @@ function verify(arr: number[]): boolean {
   return true;
 }
 
-const input = fs.readFileSync("input.txt", "utf8");
+export function part2(lines: number[][]) {
+  return lines
+    .filter((line) => {
+      const tokens = line;
+      if (tokens.length < 2) return false;
 
-const lines = input.split("\n").filter((line) => {
-  if (!line) return false;
+      if (verify(tokens)) return true;
 
-  const tokens = line.split(" ").map((x) => parseInt(x, 10));
-  if (tokens.length < 2) return false;
-
-  if (verify(tokens)) return true;
-
-  for (let i = 0; i < tokens.length; i++) {
-    const tokensCopy = tokens.slice();
-    tokensCopy.splice(i, 1);
-    if (verify(tokensCopy)) return true;
-  }
-  return false;
-});
-
-console.log(lines.length);
+      for (let i = 0; i < tokens.length; i++) {
+        const tokensCopy = tokens.slice();
+        tokensCopy.splice(i, 1);
+        if (verify(tokensCopy)) return true;
+      }
+      return false;
+    })
+    .length.toString();
+}

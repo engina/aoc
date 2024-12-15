@@ -1,32 +1,33 @@
-import fs from "fs";
+enum Direction {
+  Up,
+  Down,
+}
 
-const input = fs.readFileSync("input.txt", "utf8");
+export function part1(lines: number[][]) {
+  return lines
+    .filter((line) => {
+      let direction: Direction | undefined;
 
-const lines = input.split("\n").filter((line) => {
-  if (!line) return false;
+      const tokens = line;
+      if (tokens.length < 2) return false;
 
-  let direction: "up" | "down" | undefined;
+      let prev = tokens[0];
+      for (let i = 1; i < tokens.length; i++) {
+        const current = tokens[i];
+        const diff = current - prev;
+        prev = current;
 
-  const tokens = line.split(" ").map((x) => parseInt(x, 10));
-  if (tokens.length < 2) return false;
+        if (diff === 0) return false;
 
-  let prev = tokens[0];
-  for (let i = 1; i < tokens.length; i++) {
-    const current = tokens[i];
-    const diff = current - prev;
-    prev = current;
+        if (direction === undefined) {
+          direction = diff > 0 ? Direction.Up : Direction.Down;
+        }
 
-    if (diff === 0) return false;
-
-    if (direction === undefined) {
-      direction = diff > 0 ? "up" : "down";
-    }
-
-    if (direction === "up" && diff < 0) return false;
-    if (direction === "down" && diff > 0) return false;
-    if (Math.abs(diff) > 3) return false;
-  }
-  return true;
-});
-
-console.log(lines.length);
+        if (direction === Direction.Up && diff < 0) return false;
+        if (direction === Direction.Down && diff > 0) return false;
+        if (Math.abs(diff) > 3) return false;
+      }
+      return true;
+    })
+    .length.toString();
+}

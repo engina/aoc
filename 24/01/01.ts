@@ -1,37 +1,24 @@
-import fs from "fs";
+export function part1([a, b]: [number[], number[]]) {
+  a.sort();
+  b.sort();
 
-const a: number[] = [];
-const b: number[] = [];
-fs.readFileSync("input.txt", "utf-8")
-  .split("\n")
-  .forEach((line) => {
-    // /(\d+)\s+\(d+)/
-
-    const [aa, bb] = line
-      .trim()
-      .split("   ")
-      .map((x) => parseInt(x.trim()));
-    if (isNaN(aa) || isNaN(bb)) {
-      return;
-    }
-    a.push(aa);
-    b.push(bb);
-  });
-
-a.sort();
-b.sort();
-
-let sum = 0;
-for (let i = 0; i < a.length; i++) {
-  sum += Math.abs(a[i] - b[i]);
-}
-console.log("sum", sum);
-
-let similar = 0;
-for (let i = 0; i < a.length; i++) {
-  const needle = a[i];
-  const n = b.filter((x) => x === needle).length;
-  similar += a[i] * n;
+  let sum = 0;
+  for (let i = 0; i < a.length; i++) {
+    sum += Math.abs(a[i] - b[i]);
+  }
+  return sum.toString();
 }
 
-console.log("similar", similar);
+export function part2([a, b]: [number[], number[]]) {
+  a.sort();
+  b.sort();
+
+  let similar = 0;
+  for (let i = 0; i < a.length; i++) {
+    const needle = a[i];
+    const n = b.filter((x) => x === needle).length;
+    similar += a[i] * n;
+  }
+
+  return similar.toString();
+}

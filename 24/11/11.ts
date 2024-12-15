@@ -1,58 +1,63 @@
-import { Node } from "../../lib/linked-list";
-import fs from "fs";
-const input = fs.readFileSync("input.txt", "utf-8");
-// const input = `125 17`;
-
-const nodes = input
-  .trim()
-  .split(" ")
-  .map((t) => new Node(t));
-
-nodes.forEach((n, i) => {
-  if (i === nodes.length - 1) return;
-  n.next = nodes[i + 1];
-});
-
 type Rule = {
-  applies: (n: Node<string>) => boolean;
-  transform: (n: Node<string>) => void;
+  applies: (n: string) => boolean;
+  transform: (n: string) => string[];
 };
 
 const rules: Rule[] = [
   {
-    applies: (n) => n.value === "0",
+    applies: (n) => n === "0",
     transform: (n) => {
-      n.value = "1";
+      return ["1"];
     },
   },
   {
-    applies: (n) => n.value.length % 2 === 0,
+    applies: (n) => n.length % 2 === 0,
     transform: (n) => {
-      const left = n.value.slice(0, n.value.length / 2);
-      const right = parseInt(n.value.slice(n.value.length / 2), 10);
-      n.value = left;
-      n.next = new Node(right.toString(), n.next);
+      const left = n.slice(0, n.length / 2);
+      const right = parseInt(n.slice(n.length / 2), 10).toString();
+      return [left, right];
     },
   },
   {
     applies: (n) => true,
     transform: (n) => {
-      n.value = (parseInt(n.value, 10) * 2024).toString();
+      return [(parseInt(n, 10) * 2024).toString()];
     },
   },
 ];
 
-console.log(
-  nodes[0]
-    .toArray()
-    .map((n) => n.value)
-    .join(" -> ")
-);
+const cache: Record<string, number> = {};
 
-for (let i = 0; i < 25; i++) {
-  nodes[0].toArray().forEach((n) => {
-    rules.find((r) => r.applies(n))?.transform(n);
-  });
+// walks a single stone through the rules for a given number of iterations
+// returns the number of end stones
+function walk(input: string, iterations: number) {
+  const key = `${input}:${iterations}`;
+  if (key in cache) {
+    return cache[key];
+  }
+
+  if (iterations === 0) {
+    // no more iterations, just return 1, as this is the single end stone of this path
+    return 1;
+  }
+
+  const generated = rules.find((r) => r.applies(input))?.transform(input);
+  if (!generated) {
+    throw new Error(`No rule found for ${input}`);
+  }
+
+  let sum = 0;
+
+  for (const g of generated) {
+    sum += walk(g, iterations - 1);
+  }
+
+  cache[key] = sum;
+  return sum;
 }
 
-console.log(nodes[0].toArray().length);
+export function run(input: string[], load = 1) {
+  return input
+    .map((stone) => walk(stone, load))
+    .reduce((acc, curr) => acc + curr, 0);
+}
