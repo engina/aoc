@@ -8,6 +8,7 @@ import { bench, BenchOpts } from "./lib";
 import aoc2325 from "./23/25/index";
 import aoc2401 from "./24/01";
 import aoc2402 from "./24/02";
+import aoc2403 from "./24/03";
 import aoc2406 from "./24/06";
 import aoc2407 from "./24/07";
 import aoc2408 from "./24/08";
@@ -23,6 +24,7 @@ const days: Day<any>[] = [
   aoc2325,
   aoc2401,
   aoc2402,
+  aoc2403,
   // aoc2406,
   aoc2407,
   aoc2408,

@@ -50,7 +50,10 @@ function solve(expected: number, operands: number[]) {
           skipCombination = true;
         }
         break;
+      default:
+        throw new Error("Invalid operator");
     }
+
     if (skipCombination) continue;
 
     for (let i = 1; i < operands.length; i++) {
@@ -81,3 +84,12 @@ export function run(parsed: [number, number[]][]) {
     }, 0)
     .toString();
 }
+
+// import fs from "fs";
+// import { Transformers, parseDict } from "../../lib/parse";
+// const input = fs.readFileSync("input.txt", "utf-8");
+// const d = parseDict(input, Transformers.number, Transformers.number);
+// console.log(run(d));
+// console.log(run(d));
+// console.log(run(d));
+// console.log(run(d));

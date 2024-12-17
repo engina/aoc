@@ -82,10 +82,35 @@ export const Directions = {
   southwest: [-1, 1],
 } as const;
 
+export const DirectionsOrthogonal = [
+  Directions.north,
+  Directions.east,
+  Directions.south,
+  Directions.west,
+] as const;
+
+export function directionToStr(direction: Vector) {
+  if (direction[0] === 0 && direction[1] === -1) {
+    return "^";
+  }
+  if (direction[0] === 1 && direction[1] === 0) {
+    return ">";
+  }
+  if (direction[0] === 0 && direction[1] === 1) {
+    return "v";
+  }
+  if (direction[0] === -1 && direction[1] === 0) {
+    return "<";
+  }
+  return "?";
+}
+
 export type Direction = (typeof Directions)[keyof typeof Directions];
 
 export class Cell<T> {
-  public updated = false;
+  public distance = Infinity;
+  public explored = false;
+  public prev: Cell<T> | undefined;
   constructor(
     public value: T,
     public readonly position: Vector2,
@@ -111,6 +136,10 @@ export class Cell<T> {
     return neighbors;
   }
 
+  walk(opts: GridWalkOpts<T>) {
+    return gridWalk(this, opts);
+  }
+
   // inclusive until
   peek(direction: Vector | Vector2, until?: T): Cell<T>[] {
     const cells: Cell<T>[] = [];
@@ -122,6 +151,24 @@ export class Cell<T> {
       }
       cells.push(cell);
       if (until !== undefined && cell.value === until) {
+        break;
+      }
+      p.add(direction);
+    }
+    return cells;
+  }
+
+  // inclusive until
+  peek2(direction: Vector | Vector2, until: (c: T) => boolean): Cell<T>[] {
+    const cells: Cell<T>[] = [];
+    const p = this.position.clone().add(direction);
+    while (true) {
+      const cell = this.grid.get(p);
+      if (cell === undefined) {
+        break;
+      }
+      cells.push(cell);
+      if (until(cell.value)) {
         break;
       }
       p.add(direction);
@@ -209,7 +256,7 @@ export class Grid<T> {
     const temp = a.position.clone();
     a.position.set(b.position);
     b.position.set(temp);
-    a.updated = b.updated = true;
+    // a.updated = b.updated = true;
   }
 
   getRect(x: number, y: number, width: number, height: number): Grid<T> {
@@ -237,16 +284,228 @@ export class Grid<T> {
 
   print() {
     for (let y = 0; y < this.height; y++) {
-      let row = "";
+      let row = y % 10 === 0 ? y.toString().padStart(3, " ") + " " : "    ";
       for (let x = 0; x < this.width; x++) {
         const cell = this.cells[y * this.width + x];
         let str = cell.value;
-        if (cell.updated) {
+        if (cell.explored) {
           str = str.red;
         }
         row += str;
       }
       console.log(row);
+    }
+  }
+}
+
+type WalkState<T> = {
+  best: number;
+  cost: number;
+  paths: [number, Cell<T>[]][];
+  path: Cell<T>[];
+  branchEndState: CollisionType;
+  visited: Set<Cell<T>>;
+};
+
+export enum CollisionType {
+  NONE = 0,
+  GOAL = 1,
+  OBSTACLE = 2,
+}
+
+export type GridWalkOpts<T> = {
+  cost?: (path: Cell<T>[], prevCost: number) => number;
+  collision?: (cell: Cell<T>) => CollisionType;
+};
+
+let depth = 0;
+export function gridWalk<T>(
+  cell: Cell<T>,
+  opts: GridWalkOpts<T> = {},
+  state: WalkState<T> = {
+    best: Infinity,
+    cost: 0,
+    paths: [],
+    path: [],
+    branchEndState: CollisionType.NONE,
+    visited: new Set(),
+  }
+) {
+  // console.log(depth, "walking", cell.toString());
+  depth++;
+  state.path.push(cell);
+
+  cell.explored = true;
+  state.cost = opts.cost?.(state.path, state.cost) ?? 0;
+  if (state.cost > state.best) {
+    depth--;
+    return state;
+  }
+
+  if (opts.collision && state.path.length > 1) {
+    const collision = opts.collision(cell);
+    if (collision !== CollisionType.NONE) {
+      // cell.grid.cells.forEach((c) => (c.updated = false));
+      if (collision === CollisionType.GOAL) {
+        // console.log(
+        //   "end".red,
+        //   state.cost,
+        //   state.path.map((c) => c.toString()).join(" -> ")
+        // );
+        // cell.grid.print();
+        // console.log(`FOUND`.bgRed);
+        if (state.cost < state.best) {
+          // cell.grid.print();
+          // console.log(`New min cost ${state.cost}`.bgYellow, state.path);
+          state.best = state.cost;
+          state.paths.push([state.cost, [...state.path]]);
+          state.branchEndState = collision;
+        }
+      }
+      // console.log(
+      //   "end".red,
+      //   state.cost,
+      //   state.path.map((c) => c.toString()).join(" -> ")
+      // );
+      depth--;
+      return state;
+    }
+  }
+  const i = state.path.indexOf(cell);
+  if (i !== -1 && i !== state.path.length - 1) {
+    depth--;
+    return state;
+  }
+  // if (i !== -1 && i > 4 && i === state.path.length - 1) return state;
+  // if (state.path.includes(cell)) return state;
+
+  // if (state.visited.has(cell)) return state;
+  // state.visited.add(cell);
+  // console.log(`walking ${cell.toString()} ${state.cost} ${state.path}`.blue);
+  // if (state.cost > best) {
+  //   console.log("already worse".yellow);
+  //   return state;
+  // }
+  // we can disregard the prev cell here to optimize
+
+  // we must look for long empty corridors, r
+
+  for (const neighbor of cell.getNeighbors()) {
+    if (neighbor === undefined) continue;
+    // do not branch to walls
+    if (opts.collision?.(neighbor) === CollisionType.OBSTACLE) continue;
+    // do not go back
+    if (neighbor === state.path[state.path.length - 1]) continue;
+    // const dir = neighbor.position.clone().sub(cell.position);
+    // cell.peek(dir, "#" as T); // fixme
+    const p = state.path.length;
+    const c = state.cost;
+    // console.log(
+    //   "branching to".red,
+    //   neighbor.toString(),
+    //   "from",
+    //   cell.toString()
+    // );
+    const s = gridWalk(neighbor, opts, state);
+    state.cost = c;
+    const branchExtension = state.path.splice(p);
+    if (s.branchEndState === CollisionType.GOAL) {
+      // cell.grid.print();
+    }
+    s.branchEndState = CollisionType.NONE;
+    branchExtension.forEach((c) => (c.explored = false));
+
+    // console.log(
+    //   "branch ended",
+    //   "current best",
+    //   state.best,
+    //   s.path.map((c) => c.toString()).join("->"),
+    //   s.cost,
+    //   s.branchEndState
+    // );
+    //state.best = s.best;//
+    // if (s.branchEndState === CollisionType.GOAL && s.cost < state.best) {
+    //   console.log(`new best ${s.cost}`.bgYellow);
+    //   state.best = s.cost;
+    // }
+  }
+  depth--;
+  return state;
+}
+
+// breadth-first search
+export function BFS<T>(root: Cell<T>) {
+  const queue: Cell<T>[] = [root];
+  root.explored = true;
+  while (queue.length) {
+    const cell = queue.shift()!;
+    if (cell.value === "E") return cell;
+    for (const n of cell.getNeighbors()) {
+      if (n === undefined) continue;
+      if (n.explored === true) continue;
+      n.explored = true;
+      n.prev = cell;
+      queue.push(n);
+    }
+  }
+}
+
+const moveCost = <T>(path: Cell<T>[], prevCost = 0) => {
+  let c = prevCost;
+  if (path.length < 2) return 0;
+
+  // Get current direction
+  // const thirdToLast = path[path.length - 3] ?? Directions.east;
+  const secondToLast = path[path.length - 2];
+  const last = path[path.length - 1];
+  const dirCurr = [
+    last.position.x - secondToLast.position.x,
+    last.position.y - secondToLast.position.y,
+  ];
+
+  if (path.length === 2) {
+    if (dirCurr[0] !== 1) {
+      return 1001;
+    }
+    return 1;
+  }
+
+  const dirPrev = [
+    secondToLast.position.x - path[path.length - 3].position.x,
+    secondToLast.position.y - path[path.length - 3].position.y,
+  ];
+  // console.log({ dirCurr, dirPrev });
+  // Get direction change
+  const dx = dirCurr[0] - dirPrev[0];
+  const dy = dirCurr[1] - dirPrev[1];
+  if (dx !== 0 || dy !== 0) {
+    c += 1000;
+  }
+  c += 1;
+  return c;
+};
+
+export function BFS2<T>(root: Cell<T>) {
+  const queue: Cell<T>[] = [root];
+  root.explored = true;
+  let cost = 0;
+  let best = Infinity;
+  const path: Cell<T>[] = [];
+  while (queue.length) {
+    const cell = queue.shift()!;
+    path.push(cell);
+    cost = moveCost(path, cost);
+    if (cell.value === "E") {
+      return cell;
+    }
+
+    for (const n of cell.getNeighbors()) {
+      if (n === undefined) continue;
+      if (n.explored === true) continue;
+      if (n.value === "#") continue;
+      n.explored = true;
+      n.prev = cell;
+      queue.push(n);
     }
   }
 }

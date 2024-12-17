@@ -1,57 +1,11 @@
-import { unique } from "../../lib";
-import { Cell, Direction, Directions, Grid, Vector } from "../../lib/grid";
-import { parseGrid } from "../../lib/parse";
 import "colors";
 
-let input = `
-########
-#..O.O.#
-##@.O..#
-#...O..#
-#.#.O..#
-#...O..#
-#......#
-########
+import { Cell, Direction, Directions, Grid, Vector } from "../../lib/grid";
+import { parseGrid } from "../../lib/parse";
 
-<^^>>>vv<v>>v<<
-`;
+type CellType1 = "#" | "O" | "@" | ".";
+type CellType2 = "#" | "[" | "]" | "@" | ".";
 
-input = `##########
-#..O..O.O#
-#......O.#
-#.OO..O.O#
-#..O@..O.#
-#O#..O...#
-#O..O..O.#
-#.OO.O.OO#
-#....O...#
-##########
-
-<vv>^<v^>v>^vv^v>v<>v^v<v<^vv<<<^><<><>>v<vvv<>^v^>^<<<><<v<<<v^vv^v>^
-vvv<<^>^v^^><<>>><>^<<><^vv^^<>vvv<>><^^v>^>vv<>v<<<<v<^v>^<^^>>>^<v<v
-><>vv>v^v^<>><>>>><^^>vv>v<^^^>>v^v^<^^>v^^>v^<^v>v<>>v^v^<v>v^^<^^vv<
-<<v<^>>^^^^>>>v^<>vvv^><v<<<>^^^vv^<vvv>^>v<^^^^v<>^>vvvv><>>v^<<^^^^^
-^><^><>>><>^^<<^^v>>><^<v>^<vv>>v>>>^v><>^v><<<<v>>v<v<v>vvv>^<><<>^><
-^>><>^v<><^vvv<^^<><v<<<<<><^v<<<><<<^^<v<^^^><^>>^<v^><<<^>>^v<v^v<v^
->^>>^v>vv>^<<^v<>><<><<v<<v><>v<^vv<<<>^^v^>^^>>><<^v>>v^v><^^>>^<>vv^
-<><^^>^^^<><vvvvv^v<v<<>^v<v>v<<^><<><<><<<^^<<<^<<>><<><^^^>^^<>^>v<>
-^^>vv<^v^v<vv>^<><v<^v>^^^>>>^^vvv^>vvv<>>>^<^>>>>>^<<^v>^vvv<>^<><<v>
-v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
-`;
-
-// input = `
-// #######
-// #...#.#
-// #.....#
-// #..OO@#
-// #..O..#
-// #.....#
-// #######
-
-// <vv<<^^<<^^
-// `;
-
-type CellType = "#" | "[" | "]" | "@" | ".";
 export function setup(input: string, part: 1 | 2) {
   const [map, movesStr] = input.trim().split("\n\n");
   const moves = movesStr
@@ -77,9 +31,9 @@ export function setup(input: string, part: 1 | 2) {
   if (part === 1) return { grid, moves };
 
   if (part === 2) {
-    const grid2 = new Grid<CellType>(
+    const grid2 = new Grid<CellType2>(
       grid.data.map((line) => {
-        const l: CellType[] = [];
+        const l: CellType2[] = [];
         for (const c of line) {
           if (c === "#") {
             l.push("#", "#");
@@ -101,14 +55,16 @@ export function setup(input: string, part: 1 | 2) {
 
 export type Input = ReturnType<typeof setup>;
 
-export function part1({ grid, moves }: Input) {
+export function part1(input: Input) {
+  const grid = input.grid as Grid<CellType1>;
+  const moves = input.moves;
   const robot = grid.cells.find((c) => c.value === "@");
   if (!robot) {
     throw new Error("Robot not found");
   }
 
   for (const move of moves) {
-    const ahead = robot.peek(move, "#");
+    const ahead = robot.peek(move as Vector, "#");
     const next = ahead[0];
     if (next.value === "#") {
       continue;
@@ -142,22 +98,23 @@ export function part1({ grid, moves }: Input) {
 }
 
 export function part2(input: Input) {
-  const grid = input.grid as Grid<CellType>;
+  const grid = input.grid as Grid<CellType2>;
   const moves = input.moves;
   const robot = grid.cells.find((c) => c.value === "@");
   if (!robot) {
     throw new Error("Robot not found");
   }
 
-  type PushState = { ends: string[]; affected: Set<Cell<CellType>> };
+  type PushState = { ends: string[]; affected: Set<Cell<CellType2>> };
+
   function push(
-    box: Cell<CellType>,
+    box: Cell<CellType2>,
     direction: Direction,
     state: PushState = {
       ends: [],
       affected: new Set(),
     },
-    branch = true
+    otherHalf = false
   ): PushState {
     const { ends, affected } = state;
 
@@ -167,31 +124,38 @@ export function part2(input: Input) {
       return state;
     }
 
+    if (affected.has(box)) {
+      return state;
+    }
+
     affected.add(box);
     if (direction[1] !== 0) {
       if (box.value === "[") {
-        if (branch) {
+        if (!otherHalf) {
           const [right] = box.getNeighbors([Directions.east]);
-          push(right!, direction, state, false);
+          push(right!, direction, state, true);
         }
       } else {
-        if (branch) {
+        if (!otherHalf) {
           const [left] = box.getNeighbors([Directions.west]);
-          push(left!, direction, state, false);
+          push(left!, direction, state, true);
         }
       }
+
       const [left, ahead, right] = box.getNeighbors([
         [-1, direction[1]],
         direction,
         [1, direction[1]],
       ]);
 
-      const cellsOfInterest: Cell<CellType>[] = [ahead!];
+      const cellsOfInterest: Cell<CellType2>[] = [ahead!];
+
       if (box.value === "[") {
         cellsOfInterest.push(right!);
       } else if (box.value === "]") {
         cellsOfInterest.push(left!);
       }
+
       for (const c of cellsOfInterest) {
         push(c!, direction, state);
       }
@@ -202,43 +166,26 @@ export function part2(input: Input) {
     }
   }
 
-  async function step(direction: Vector) {
-    // grid.print();
-    function directionToStr(direction: Vector) {
-      if (direction[0] === 0 && direction[1] === -1) {
-        return "^";
-      }
-      if (direction[0] === 0 && direction[1] === 1) {
-        return "v";
-      }
-      if (direction[0] === -1 && direction[1] === 0) {
-        return "<";
-      }
-      if (direction[0] === 1 && direction[1] === 0) {
-        return ">";
-      }
-      return "X";
-    }
-    // console.log("Press any key to continue", directionToStr(direction));
-    // await waitForInput();
-  }
-
   for (let i = 0; i < moves.length; i++) {
     const move = moves[i];
     const [ahead] = robot.getNeighbors([move]);
-    robot.updated = true;
+
     if (ahead!.value === "#") {
       continue;
     }
+
     if (ahead!.value === ".") {
       grid.swap(robot, ahead!);
       continue;
     }
+
     const pushPath = push(ahead!, move);
+
     const freeToPush = pushPath.ends.every((e) => e === ".");
     if (!freeToPush) {
       continue;
     }
+
     pushPath.affected.add(robot);
     grid.shift(pushPath.affected, move);
   }
@@ -251,3 +198,7 @@ export function part2(input: Input) {
     .toString();
   return sum.toString();
 }
+
+// const input = fs.readFileSync("input.txt", "utf-8");
+// const parsed = setup(input, 2);
+// console.log("re", part2(parsed));
