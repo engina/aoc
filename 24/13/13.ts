@@ -1,7 +1,6 @@
 import { parseDict2 } from "../../lib/parse";
-import { bench, range } from "../../lib";
+import { range } from "../../lib";
 import { Vector2 } from "../../lib/grid";
-import { amemo } from "amemo";
 
 export const parse = (input: string) => {
   const parsed = parseDict2(input, {
