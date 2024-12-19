@@ -30,11 +30,7 @@ const sharedCache: Record<string, {}> = {};
 export function part1({ patternsInStock, patternsDesired }: Input) {
   return patternsDesired
     .map((d) =>
-      walk(
-        d,
-        patternsInStock,
-        sharedCache[d] ? sharedCache[d] : (sharedCache[d] = {})
-      )
+      walk(d, patternsInStock, sharedCache[d] ?? (sharedCache[d] = {}))
     )
     .filter((n) => n > 0)
     .length.toString();
@@ -42,13 +38,7 @@ export function part1({ patternsInStock, patternsDesired }: Input) {
 
 export function part2({ patternsInStock, patternsDesired }: Input) {
   return patternsDesired
-    .map((d) =>
-      walk(
-        d,
-        patternsInStock,
-        sharedCache[d] ? sharedCache[d] : (sharedCache[d] = {})
-      )
-    )
+    .map((d) => walk(d, patternsInStock, sharedCache[d]))
     .reduce((acc, curr) => acc + curr, 0)
     .toString();
 }

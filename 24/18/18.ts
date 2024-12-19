@@ -6,47 +6,7 @@ import {
   DirectionsOrthogonal,
   Grid,
   Vector,
-  Vector2,
 } from "../../lib/grid";
-import { parseArr } from "../../lib/parse";
-
-let input = ``;
-
-input = `5,4
-4,2
-4,5
-3,0
-2,1
-6,3
-2,4
-1,5
-0,6
-3,3
-2,6
-5,1
-1,2
-5,5
-2,5
-6,5
-1,4
-0,4
-6,4
-1,1
-6,1
-1,0
-0,5
-1,6
-2,0
-`;
-
-let WIDTH = 7;
-let HEIGHT = 7;
-
-// import fs from "fs";
-// input = fs.readFileSync(__dirname + "/input.txt", "utf-8");
-
-// WIDTH = 71;
-// HEIGHT = 71;
 
 class MemByte {
   constructor(public char: string, public dropTime: number) {}
@@ -216,7 +176,7 @@ export function part2({ grid, coords }: Input) {
   // return;
 
   //////
-  grid.print();
+  // grid.print();
   startCandidates.forEach((c) => (c.distance = c.value.dropTime));
   const end = dijkstra(
     startCandidates,
@@ -238,14 +198,51 @@ export function part2({ grid, coords }: Input) {
   let u = end;
   let max = 0;
   while (u) {
-    console.log("walking", u.toString());
+    // console.log("walking", u.toString());
     u.value.char = u.value.char.bgGreen;
     max = Math.max(max, u.value.dropTime);
     u = u.prev!;
   }
-  grid.print();
+  // grid.print();
   return coords[max].join(",");
 }
 
+let input = ``;
+
+input = `5,4
+4,2
+4,5
+3,0
+2,1
+6,3
+2,4
+1,5
+0,6
+3,3
+2,6
+5,1
+1,2
+5,5
+2,5
+6,5
+1,4
+0,4
+6,4
+1,1
+6,1
+1,0
+0,5
+1,6
+2,0
+`;
+
+let WIDTH = 7;
+let HEIGHT = 7;
+
+// import fs from "fs";
+// input = fs.readFileSync("input.txt", "utf-8");
+
+WIDTH = 71;
+HEIGHT = 71;
 // console.log(part1(setup(input)));
 // console.log(part2(setup(input)));

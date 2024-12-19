@@ -23,7 +23,7 @@ enum Opcode {
   CDV = 7,
 }
 
-const debug = (...args: any[]) => true && console.log(...args);
+const debug = (...args: any[]) => false && console.log(...args);
 
 export function setup(input: string) {
   return new Computer(input);
