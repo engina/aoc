@@ -138,7 +138,7 @@ const cmd = new Command()
         const benchResult = bench((i) => runner(i), {
           ...runnerOpts,
           progress: (i) => {
-            process.stdout.write(".");
+            // process.stdout.write(".");
           },
           setup: setup ? () => setup(inputStr, i + 1) : () => inputStr,
         });

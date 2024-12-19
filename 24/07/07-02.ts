@@ -1,95 +1,57 @@
-import { permutations } from "../../lib";
-import { amemo, MemCacheStore } from "amemo";
+// Optimizations:
+// 1. unshift || and * operands (to the head of the queue) because those are harder to satisfy and is a strong signal
+// 2. push + operands as it is very often satisfied
 
-type Operetor = (a: number, b: number) => number;
+function solve(e: number, o: number[], concatEnable = false) {
+  const queue = [[e, [...o]]] as [number, number[]][];
+  while (queue.length) {
+    const [expected, operands] = queue.shift()!;
+    const lastOperand = operands.pop()!;
 
-const mul = (a: number, b: number) => a * b;
-const add = (a: number, b: number) => a + b;
-const concat = (a: number, b: number) => {
-  let p = Math.floor(Math.log10(b)) + 1;
-  return a * Math.pow(10, p) + b;
-};
-
-const operatorsDict: Record<string, Operetor> = {
-  "*": mul,
-  "+": add,
-  "||": concat,
-};
-
-const operatorsArr = Object.entries(operatorsDict);
-
-const permute = amemo(
-  (n: number) => {
-    return [...permutations(operatorsArr, n)];
-  },
-  {
-    cacheStore: new MemCacheStore(),
-  }
-);
-
-function solve(expected: number, operands: number[]) {
-  for (const operatorCombination of permute(operands.length - 1)) {
-    let result = operands[0];
-    let skipCombination = false;
-    const [lastOp] = operatorCombination[operatorCombination.length - 1];
-    const lastOperand = operands[operands.length - 1];
-    switch (lastOp) {
-      case "+":
-        if (lastOperand > expected) {
-          skipCombination = true;
-        }
-        break;
-      case "*":
-        if (expected % lastOperand !== 0) {
-          skipCombination = true;
-        }
-        break;
-      case "||":
-        let p = Math.floor(Math.log10(lastOperand)) + 1;
-        if (expected % Math.pow(10, p) !== lastOperand) {
-          skipCombination = true;
-        }
-        break;
-      default:
-        throw new Error("Invalid operator");
+    if (operands.length === 0) {
+      if (lastOperand === expected) return true;
+      continue;
     }
 
-    if (skipCombination) continue;
-
-    for (let i = 1; i < operands.length; i++) {
-      const op2 = operands[i];
-      const [op, operator] = operatorCombination[i - 1];
-      result = operator(result, op2);
+    if (expected % lastOperand === 0) {
+      queue.unshift([expected / lastOperand, [...operands]]);
     }
 
-    if (result === expected) {
-      return operatorCombination.map(([op]) => op).join(" ");
+    if (concatEnable) {
+      const eStr = expected.toString();
+      const lastOperandStr = lastOperand.toString();
+      if (eStr.endsWith(lastOperandStr)) {
+        queue.unshift([
+          parseInt(eStr.slice(0, -lastOperandStr.length)),
+          [...operands],
+        ]);
+      }
+    }
+
+    if (expected > lastOperand) {
+      queue.push([expected - lastOperand, [...operands]]);
     }
   }
-  return undefined;
+  return false;
 }
 
-export function run(parsed: [number, number[]][]) {
-  return parsed
-    .map(([expected, operands]) => {
-      return [expected, operands, solve(expected, operands)] as [
-        number,
-        number[],
-        string | undefined
-      ];
-    })
-    .reduce((acc, [expected, operands, solution]) => {
-      if (!solution) return acc;
-      return acc + expected;
-    }, 0)
+export function part1(parsed: [number, number[]][]) {
+  return run(parsed, false);
+}
+
+export function part2(parsed: [number, number[]][]) {
+  return run(parsed, true);
+}
+
+export function run(parsed: [number, number[]][], concatEnable: boolean) {
+  const result = parsed.map(
+    ([expected, operands]) =>
+      [expected, solve(expected, operands, concatEnable)] as [number, boolean]
+  );
+
+  return result
+    .filter((a) => a[1])
+    .map((a) => a[0])
+    .reduce((acc, cur) => acc + cur, 0)
     .toString();
 }
-
-// import fs from "fs";
-// import { Transformers, parseDict } from "../../lib/parse";
-// const input = fs.readFileSync("input.txt", "utf-8");
-// const d = parseDict(input, Transformers.number, Transformers.number);
-// console.log(run(d));
-// console.log(run(d));
-// console.log(run(d));
-// console.log(run(d));

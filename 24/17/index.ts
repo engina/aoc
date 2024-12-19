@@ -11,5 +11,9 @@ export default {
       runner: part1,
       expected: "7,4,2,5,1,4,6,0,4",
     },
+    {
+      runner: () => "Not implemented yet",
+      expected: "??",
+    },
   ],
 } as Day<Input>;

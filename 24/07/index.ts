@@ -1,7 +1,6 @@
-import { parseArr, parseDict, Transformers } from "../../lib/parse";
+import { parseDict, Transformers } from "../../lib/parse";
 import { Day } from "../../main";
-import { run as run1 } from "./07";
-import { run as run2 } from "./07-02";
+import { part1, part2 } from "./07-02";
 
 export default {
   name: "Bridge Repair",
@@ -11,15 +10,11 @@ export default {
     parseDict(input, Transformers.number, Transformers.number),
   parts: [
     {
-      runner: (input) => {
-        return run1(input);
-      },
+      runner: part1,
       expected: "4122618559853",
     },
     {
-      runner: (input) => {
-        return run2(input).toString();
-      },
+      runner: part2,
       expected: "227615740238334",
     },
   ],
