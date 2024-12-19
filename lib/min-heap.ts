@@ -1,5 +1,5 @@
-export class MinHeap<T> {
-  private heap: T[];
+export class MinHeap<T extends { index: number }> {
+  public heap: T[];
   private compare: (a: T, b: T) => number;
 
   constructor(compareFn: (a: T, b: T) => number) {
@@ -10,6 +10,7 @@ export class MinHeap<T> {
   // Build heap from initial array
   buildHeap(arr: T[]): void {
     this.heap = arr;
+    arr.forEach((el, i) => (el.index = i));
     for (let i = Math.floor(this.size() / 2) - 1; i >= 0; i--) {
       this.heapifyDown(i);
     }
@@ -29,6 +30,14 @@ export class MinHeap<T> {
     } else {
       this.heapifyDown(index);
     }
+  }
+
+  public decreased(index: number) {
+    this.heapifyUp(index);
+  }
+
+  public increased(index: number) {
+    this.heapifyDown(index);
   }
 
   // Heapify up to restore the heap property
@@ -79,7 +88,10 @@ export class MinHeap<T> {
 
   // Swap two elements in the heap
   private swap(i: number, j: number): void {
+    console.log("swapping");
     [this.heap[i], this.heap[j]] = [this.heap[j], this.heap[i]];
+    this.heap[i].index = i;
+    this.heap[j].index = j;
   }
 
   // Get the current size of the heap
@@ -89,15 +101,15 @@ export class MinHeap<T> {
 }
 
 // Example Usage
-const data = [10, 20, 5, 6, 12, 30, 7, 17];
-const minHeap = new MinHeap<number>((a, b) => a - b);
-minHeap.buildHeap(data);
+// const data = [10, 20, 5, 6, 12, 30, 7, 17];
+// const minHeap = new MinHeap<number>((a, b) => a - b);
+// minHeap.buildHeap(data);
 
-console.log("Initial Min-Heap:", data);
+// console.log("Initial Min-Heap:", data);
 
-// Update value at index 2 (5 -> 3)
-minHeap.update(2, 3);
-console.log("After Updating Index 2 to 3:", data);
+// // Update value at index 2 (5 -> 3)
+// minHeap.update(2, 3);
+// console.log("After Updating Index 2 to 3:", data);
 
-// Get the smallest element
-console.log("Smallest Element:", minHeap.peek());
+// // Get the smallest element
+// console.log("Smallest Element:", minHeap.peek());

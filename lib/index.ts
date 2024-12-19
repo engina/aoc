@@ -63,6 +63,8 @@ export function range(start, end, step = 1) {
 }
 
 import "colors";
+import { MinHeap } from "./min-heap";
+import { LinkedList } from "./linked-list";
 export type BenchOpts<F> = {
   label?: string;
   disablePrint?: boolean;
@@ -135,4 +137,135 @@ export const bench = <R, F>(
 
 export async function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export function dijkstra<T extends { prev: T | undefined; distance: number }>(
+  start: T | T[],
+  all: T[],
+  distance: (s: T, d: T) => number,
+  edges: (s: T) => T[],
+  goals?: Set<T>
+) {
+  const starts = Array.isArray(start) ? start : [start];
+  const queue: T[] = [...starts, ...all];
+  // starts.forEach((s) => (s.distance = 0));
+  while (queue.length) {
+    const u = queue.shift();
+    if (!u) continue;
+
+    if (goals?.has(u)) {
+      return u;
+    }
+
+    const neighbors = edges(u);
+
+    for (const neighbor of neighbors) {
+      if (!neighbor) continue;
+      const ni = queue.indexOf(neighbor);
+      if (ni === -1) continue;
+      const d = distance(u, neighbor);
+      if (d < neighbor.distance) {
+        neighbor.distance = d;
+        queue.sort((a, b) => a.distance - b.distance);
+        neighbor.prev = u;
+      }
+    }
+  }
+}
+
+// dijkstra with priority queue
+export function dijkstraPQ<
+  T extends { prev: T | undefined; distance: number; index: number }
+>(
+  start: T | T[],
+  all: T[],
+  distance: (s: T, d: T) => number,
+  edges: (s: T) => T[],
+  goals?: Set<T>
+) {
+  const starts = Array.isArray(start) ? start : [start];
+  starts.forEach((s) => (s.distance = 0));
+  const queue = LinkedList.fromArray(
+    [...starts, ...all.filter((c) => c !== start)],
+    (a, b) => a.distance - b.distance
+  );
+  while (queue.head) {
+    const u = queue.shift();
+    if (!u) continue;
+
+    if (goals?.has(u.value)) {
+      return u.value;
+    }
+
+    const neighbors = edges(u.value);
+
+    for (const neighbor of neighbors) {
+      if (!neighbor) continue;
+      const d = distance(u.value, neighbor);
+      if (d < neighbor.distance) {
+        neighbor.distance = d;
+        queue.pushSorted(neighbor);
+        neighbor.prev = u.value;
+      }
+    }
+  }
+}
+
+// Breadth-first search
+// 1  procedure BFS(G, root) is
+// 2      let Q be a queue
+// 3      label root as explored
+// 4      Q.enqueue(root)
+// 5      while Q is not empty do
+// 6          v := Q.dequeue()
+// 7          if v is the goal then
+// 8              return v
+// 9          for all edges from v to w in G.adjacentEdges(v) do
+// 10              if w is not labeled as explored then
+// 11                  label w as explored
+// 12                  w.parent := v
+// 13                  Q.enqueue(w)
+export function bfs<T extends { explored: boolean; prev?: T }>(
+  start: T | T[],
+  goal: (s: T) => boolean,
+  edges: (s: T) => T[]
+) {
+  const starts = Array.isArray(start) ? start : [start];
+  const queue: [T, number][] = starts.map((s) => [s, 0]);
+  starts.forEach((s) => (s.explored = true));
+  while (queue.length) {
+    const [u, cost] = queue.shift()!;
+    if (!u) continue;
+    if (goal(u)) return { goal: u, cost };
+
+    const neighbors = edges(u);
+
+    for (const neighbor of neighbors) {
+      if (!neighbor || neighbor.explored) continue;
+      neighbor.explored = true;
+      neighbor.prev = u;
+      queue.push([neighbor, cost + 1]);
+    }
+  }
+}
+
+export function binarySearch<T>(
+  arr: T[],
+  target: T,
+  compare: (a: T, b: T) => number
+): number {
+  let left = 0;
+  let right = arr.length - 1;
+  while (left <= right) {
+    const mid = Math.floor((left + right) / 2);
+    const cmp = compare(arr[mid], target);
+    if (cmp === 0) {
+      return mid;
+    } else if (cmp < 0) {
+      left = mid + 1;
+    } else {
+      right = mid - 1;
+    }
+  }
+  return -1;
 }

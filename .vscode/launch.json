@@ -11,6 +11,18 @@
       "skipFiles": ["<node_internals>/**"],
       "program": "${workspaceFolder}/23/25.js",
       "outFiles": ["${workspaceFolder}/**/*.js"]
+    },
+    {
+      "name": "2417",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/24/17/07",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${fileDirname}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "lldb"
     }
   ]
 }

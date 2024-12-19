@@ -71,7 +71,7 @@ export class Vector2 {
   }
 }
 
-export const Directions = {
+export const Directions: Record<string, Vector> = {
   north: [0, -1],
   south: [0, 1],
   east: [1, 0],
@@ -87,6 +87,24 @@ export const DirectionsOrthogonal = [
   Directions.east,
   Directions.south,
   Directions.west,
+] as const;
+
+export const DirectionsDiagonal = [
+  Directions.northeast,
+  Directions.southeast,
+  Directions.southwest,
+  Directions.northwest,
+] as const;
+
+export const DirectionsAll = [
+  Directions.north,
+  Directions.northeast,
+  Directions.east,
+  Directions.southeast,
+  Directions.south,
+  Directions.southwest,
+  Directions.west,
+  Directions.northwest,
 ] as const;
 
 export function directionToStr(direction: Vector) {
@@ -110,6 +128,7 @@ export type Direction = (typeof Directions)[keyof typeof Directions];
 export class Cell<T> {
   public distance = Infinity;
   public explored = false;
+  public index: number = -1;
   public prev: Cell<T> | undefined;
   constructor(
     public value: T,
@@ -118,7 +137,7 @@ export class Cell<T> {
   ) {}
 
   getNeighbors(
-    directions: Direction[] = [
+    directions: Vector[] = [
       Directions.north,
       Directions.east,
       Directions.south,
@@ -283,11 +302,12 @@ export class Grid<T> {
   }
 
   print() {
+    console.log("Grid dump".bgBlue);
     for (let y = 0; y < this.height; y++) {
       let row = y % 10 === 0 ? y.toString().padStart(3, " ") + " " : "    ";
       for (let x = 0; x < this.width; x++) {
         const cell = this.cells[y * this.width + x];
-        let str = cell.value;
+        let str = (cell.value as any).toString();
         if (cell.explored) {
           str = str.red;
         }
