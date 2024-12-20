@@ -1,6 +1,6 @@
 import { parseDict, Transformers } from "../../lib/parse";
 import { Day } from "../../main";
-import { part1, part2 } from "./07-02";
+import { part1, part2 } from "./07";
 
 export default {
   name: "Bridge Repair",

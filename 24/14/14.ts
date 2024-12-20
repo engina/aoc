@@ -8,7 +8,7 @@ export type Robot = {
   velocity: Vector2;
 };
 
-function mod(n, m) {
+function mod(n: number, m: number) {
   return ((n % m) + m) % m;
 }
 

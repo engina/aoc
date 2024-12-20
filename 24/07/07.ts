@@ -1,89 +1,57 @@
-import fs from "fs";
-import assert from "assert";
-import { parseDict, Transformers } from "../../lib/parse";
-import { permutations } from "../../lib";
+// Optimizations:
+// 1. unshift || and * operands (to the head of the queue) because those are harder to satisfy and is a strong signal
+// 2. push + operands as it is very often satisfied
 
-export function setup(input: string) {
-  return parseDict(input, Transformers.number, Transformers.number);
-}
+function solve(e: number, o: number[], concatEnable = false) {
+  const queue = [[e, [...o]]] as [number, number[]][];
+  while (queue.length) {
+    const [expected, operands] = queue.shift()!;
+    const lastOperand = operands.pop()!;
 
-// console.log(`Validating`);
-
-// parsed.forEach(([expected, operands]) => {
-//   assert(Number.isInteger(Number(expected)));
-//   assert(Array.isArray(operands));
-//   assert(operands.length >= 2);
-// });
-
-// console.log(`Validated ${Object.keys(parsed).length} entries`);
-
-// console.log(parsed);
-// process.exit(0);
-
-type Operetor = (a: number, b: number) => number;
-
-const mul = (a: number, b: number) => a * b;
-const add = (a: number, b: number) => a + b;
-
-const operatorsDict: Record<string, Operetor> = {
-  "*": mul,
-  "+": add,
-};
-
-const operatorsArr = Object.entries(operatorsDict);
-
-function solve(expected: number, operands: number[]) {
-  // console.log("Solving", expected, operands.join(" "));
-  for (const operatorCombination of permutations(
-    operatorsArr,
-    operands.length - 1
-  )) {
-    let result = operands[0];
-    for (let i = 1; i < operands.length; i++) {
-      const op2 = operands[i];
-      const [, operator] = operatorCombination[i - 1];
-      result = operator(result, op2);
+    if (operands.length === 0) {
+      if (lastOperand === expected) return true;
+      continue;
     }
 
-    // console.log(
-    //   "Trying",
-    //   operatorCombination.map(([op]) => op).join(" "),
-    //   "to reach",
-    //   expected,
-    //   "got",
-    //   result
-    // );
-    if (result === expected) {
-      // console.log("Found it");
-      return operatorCombination.map(([op]) => op).join(" ");
+    if (expected % lastOperand === 0) {
+      queue.unshift([expected / lastOperand, [...operands]]);
+    }
+
+    if (concatEnable) {
+      const eStr = expected.toString();
+      const lastOperandStr = lastOperand.toString();
+      if (eStr.endsWith(lastOperandStr)) {
+        queue.unshift([
+          parseInt(eStr.slice(0, -lastOperandStr.length)),
+          [...operands],
+        ]);
+      }
+    }
+
+    if (expected > lastOperand) {
+      queue.push([expected - lastOperand, [...operands]]);
     }
   }
-  return undefined;
+  return false;
 }
 
-// let i = 0;
-// for (const perm of permutations(operatorsArr, 5)) {
-//   console.log(i++, perm.map(([op]) => op).join(" "));
-// }
+export function part1(parsed: [number, number[]][]) {
+  return run(parsed, false);
+}
 
-export function run(parsed) {
-  let sum = 0;
-  parsed
-    .filter(([expected, operands]) => {
-      return true;
-    })
-    .map(([expected, operands]) => {
-      return [expected, operands, solve(expected, operands)] as [
-        number,
-        number[],
-        string | undefined
-      ];
-    })
-    .filter(([, , solution]) => solution !== undefined)
-    .forEach(([expected, operands, solution]) => {
-      // console.log(expected, operands.join(" "), solution);
-      sum += expected;
-    });
+export function part2(parsed: [number, number[]][]) {
+  return run(parsed, true);
+}
 
-  return sum.toString();
+export function run(parsed: [number, number[]][], concatEnable: boolean) {
+  const result = parsed.map(
+    ([expected, operands]) =>
+      [expected, solve(expected, operands, concatEnable)] as [number, boolean]
+  );
+
+  return result
+    .filter((a) => a[1])
+    .map((a) => a[0])
+    .reduce((acc, cur) => acc + cur, 0)
+    .toString();
 }

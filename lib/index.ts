@@ -148,7 +148,7 @@ export function dijkstra<T extends { prev: T | undefined; distance: number }>(
 ) {
   const starts = Array.isArray(start) ? start : [start];
   const queue: T[] = [...starts, ...all];
-  // starts.forEach((s) => (s.distance = 0));
+  starts.forEach((s) => (s.distance = 0));
   while (queue.length) {
     const u = queue.shift();
     if (!u) continue;
@@ -183,27 +183,32 @@ export function dijkstraPQ<
   edges: (s: T) => T[],
   goals?: Set<T>
 ) {
-  const starts = Array.isArray(start) ? start : [start];
-  starts.forEach((s) => (s.distance = 0));
+  // const starts = Array.isArray(start) ? start : [start];
+  // starts.forEach((s) => (s.distance = 0));
   const queue = LinkedList.fromArray(
-    [...starts, ...all.filter((c) => c !== start)],
+    [...all],
     (a, b) => a.distance - b.distance
   );
   while (queue.head) {
     const u = queue.shift();
     if (!u) continue;
-
+    queue.assertSorted();
     if (goals?.has(u.value)) {
       return u.value;
     }
 
     const neighbors = edges(u.value);
-
+    queue.assertSorted();
     for (const neighbor of neighbors) {
       if (!neighbor) continue;
+      if (!queue.has(neighbor)) continue;
       const d = distance(u.value, neighbor);
+      queue.assertSorted();
       if (d < neighbor.distance) {
+        queue.remove(neighbor);
+        queue.assertSorted();
         neighbor.distance = d;
+        queue.assertSorted();
         queue.pushSorted(neighbor);
         neighbor.prev = u.value;
       }

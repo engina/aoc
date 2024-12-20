@@ -178,7 +178,7 @@ export function part2({ grid, coords }: Input) {
   //////
   // grid.print();
   startCandidates.forEach((c) => (c.distance = c.value.dropTime));
-  const end = dijkstra(
+  const end = dijkstraPQ(
     startCandidates,
     corruptions,
     (u, d) => {
@@ -194,9 +194,14 @@ export function part2({ grid, coords }: Input) {
     throw new Error("No solution");
   }
   // console.log("end", end.position.toString());
-  // end.value.char = end.value.char.bgRed;
+  end.value.char = end.value.char.bgRed;
   let u = end;
   let max = 0;
+
+  grid.cells.forEach((c) => {
+    if (c.explored) c.value.char = c.value.char.bgGreen;
+  });
+
   while (u) {
     // console.log("walking", u.toString());
     u.value.char = u.value.char.bgGreen;

@@ -196,7 +196,7 @@ export class Cell<T> {
   }
 
   toString(): string {
-    return `${this.position.x},${this.position.y}: "${this.value}"`;
+    return `${this.position.x},${this.position.y}: "${this.value}" [${this.distance}]`;
   }
 }
 
