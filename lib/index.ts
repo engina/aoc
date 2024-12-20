@@ -96,12 +96,12 @@ export const bench = <R, F>(
 
   let discard = opts.discard;
 
-  if (discard === undefined) {
-    discard = Math.floor(runs / 4);
-  }
+  if (discard === undefined) discard = Math.floor(runs / 4);
 
   if (runs - discard * 2 < 2) discard = 0;
+
   let progressCounter = 0;
+
   const results = range(0, runs)
     .map(() => {
       const r = run();
@@ -109,6 +109,7 @@ export const bench = <R, F>(
       return r;
     })
     .sort((a, b) => b.elapsed - a.elapsed);
+
   process.stdout.write("\b".repeat(runs));
   const max = results[0].elapsed;
   const min = results[runs - 1].elapsed;
@@ -174,6 +175,7 @@ export function dijkstra<T extends { prev: T | undefined; distance: number }>(
 }
 
 // dijkstra with priority queue
+// user must set distance and prev values beforehand
 export function dijkstraPQ<
   T extends { prev: T | undefined; distance: number; index: number }
 >(
@@ -183,32 +185,26 @@ export function dijkstraPQ<
   edges: (s: T) => T[],
   goals?: Set<T>
 ) {
-  // const starts = Array.isArray(start) ? start : [start];
-  // starts.forEach((s) => (s.distance = 0));
   const queue = LinkedList.fromArray(
     [...all],
     (a, b) => a.distance - b.distance
   );
+
   while (queue.head) {
     const u = queue.shift();
     if (!u) continue;
-    queue.assertSorted();
     if (goals?.has(u.value)) {
       return u.value;
     }
 
     const neighbors = edges(u.value);
-    queue.assertSorted();
     for (const neighbor of neighbors) {
       if (!neighbor) continue;
       if (!queue.has(neighbor)) continue;
       const d = distance(u.value, neighbor);
-      queue.assertSorted();
       if (d < neighbor.distance) {
         queue.remove(neighbor);
-        queue.assertSorted();
         neighbor.distance = d;
-        queue.assertSorted();
         queue.pushSorted(neighbor);
         neighbor.prev = u.value;
       }
@@ -238,10 +234,13 @@ export function bfs<T extends { explored: boolean; prev?: T }>(
   const starts = Array.isArray(start) ? start : [start];
   const queue: [T, number][] = starts.map((s) => [s, 0]);
   starts.forEach((s) => (s.explored = true));
+
   while (queue.length) {
     const [u, cost] = queue.shift()!;
     if (!u) continue;
-    if (goal(u)) return { goal: u, cost };
+    if (goal(u)) {
+      return { goal: u, cost };
+    }
 
     const neighbors = edges(u);
 

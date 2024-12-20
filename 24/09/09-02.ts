@@ -1,3 +1,5 @@
+import { bench } from "../../lib";
+
 class Node<T> {
   constructor(
     public payload: T,
@@ -236,8 +238,10 @@ function checksumList(blockList: List<Block>) {
 }
 
 export function run(input: string) {
-  const l = layout(input);
-  const d = defrag(l);
-  const c = checksumList(d);
+  const l = bench(() => layout(input), { runs: 1 }).results[0].result;
+  // const d = defrag(l);
+  const d = bench(() => defrag(l), { runs: 1 }).results[0].result;
+  // const c = checksumList(d);
+  const c = bench(() => checksumList(d), { runs: 1 }).results[0].result;
   return c;
 }

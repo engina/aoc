@@ -8,6 +8,7 @@ export type Robot = {
   velocity: Vector2;
 };
 
+// module that can handle negative numbers
 function mod(n: number, m: number) {
   return ((n % m) + m) % m;
 }
@@ -35,30 +36,6 @@ function quadrantCount(positions: Vector2[], width: number, height: number) {
     }
   }
   return quadrants;
-}
-
-function printGrid(moved: Vector2[]) {
-  for (let y = 0; y < HEIGHT; y++) {
-    let row = "";
-    for (let x = 0; x < WIDTH; x++) {
-      // show quadrants
-      if (x === Math.floor(WIDTH / 2) && y === Math.floor(HEIGHT / 2)) {
-        row += "+";
-        continue;
-      }
-      if (x === Math.floor(WIDTH / 2)) {
-        row += "|";
-        continue;
-      }
-      if (y === Math.floor(HEIGHT / 2)) {
-        row += "-";
-        continue;
-      }
-      const found = moved.filter((m) => m.x === x && m.y === y);
-      row += found.length > 0 ? found.length.toString() : ".";
-    }
-    console.log(row);
-  }
 }
 
 function move(robot: Robot, duration: number) {
@@ -108,4 +85,28 @@ export function run2(
     }
   }
   return "";
+}
+
+function printGrid(moved: Vector2[]) {
+  for (let y = 0; y < HEIGHT; y++) {
+    let row = "";
+    for (let x = 0; x < WIDTH; x++) {
+      // show quadrants
+      if (x === Math.floor(WIDTH / 2) && y === Math.floor(HEIGHT / 2)) {
+        row += "+";
+        continue;
+      }
+      if (x === Math.floor(WIDTH / 2)) {
+        row += "|";
+        continue;
+      }
+      if (y === Math.floor(HEIGHT / 2)) {
+        row += "-";
+        continue;
+      }
+      const found = moved.filter((m) => m.x === x && m.y === y);
+      row += found.length > 0 ? found.length.toString() : ".";
+    }
+    console.log(row);
+  }
 }
