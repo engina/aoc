@@ -13,7 +13,7 @@ export default {
     },
     {
       runner: part2,
-      expected: "732978410442050",
+      expected: "1008542",
     },
   ],
 } as Day<Input>;
