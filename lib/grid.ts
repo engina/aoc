@@ -62,6 +62,13 @@ export class Vector2 {
     return this;
   }
 
+  manhattan(vector: Vector2 | Vector): number {
+    if (Array.isArray(vector)) {
+      return Math.abs(this.x - vector[0]) + Math.abs(this.y - vector[1]);
+    }
+    return Math.abs(this.x - vector.x) + Math.abs(this.y - vector.y);
+  }
+
   clone(): Vector2 {
     return new Vector2(this.x, this.y);
   }
@@ -196,7 +203,7 @@ export class Cell<T> {
   }
 
   toString(): string {
-    return `${this.position.x},${this.position.y}: "${this.value}" [${this.distance}]`;
+    return `${this.position.x},${this.position.y}: "${this.value}"`; // [${this.distance}]`;
   }
 }
 

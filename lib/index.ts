@@ -229,7 +229,7 @@ export function dijkstraPQ<
 export function bfs<T extends { explored: boolean; prev?: T }>(
   start: T | T[],
   goal: (s: T) => boolean,
-  edges: (s: T) => T[]
+  edges: (s: T, cost: number) => T[]
 ) {
   const starts = Array.isArray(start) ? start : [start];
   const queue: [T, number][] = starts.map((s) => [s, 0]);
@@ -242,7 +242,7 @@ export function bfs<T extends { explored: boolean; prev?: T }>(
       return { goal: u, cost };
     }
 
-    const neighbors = edges(u);
+    const neighbors = edges(u, cost);
 
     for (const neighbor of neighbors) {
       if (!neighbor || neighbor.explored) continue;
@@ -272,4 +272,41 @@ export function binarySearch<T>(
     }
   }
   return -1;
+}
+
+export function dfs<T extends { explored: boolean; prev?: T }>(
+  start: T,
+  goal: (s: T) => boolean,
+  edges: (s: T) => T[],
+  depthFirst = true
+) {
+  const stack: [T, number][] = [[start, 0]];
+  const visited = new Set<T>();
+  visited.add(start);
+  const paths: T[][] = [];
+
+  while (stack.length) {
+    const [u, cost] = depthFirst ? stack.pop()! : stack.shift()!;
+    if (!u) continue;
+    if (goal(u)) {
+      let v: T | undefined = u;
+      const path = [];
+      while (v) {
+        path.push(v);
+        v = v.prev;
+      }
+      paths.push(path);
+      continue;
+    }
+
+    const neighbors = edges(u);
+
+    for (const neighbor of neighbors) {
+      if (!neighbor || visited.has(neighbor)) continue;
+      visited.add(neighbor);
+      stack.push([neighbor, cost + 1]);
+      neighbor.prev = u;
+    }
+  }
+  return paths;
 }
