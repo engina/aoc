@@ -1,38 +1,14 @@
-let input = ``;
-
-input = `1
-10
-100
-2024
-`;
-
-import fs from "fs";
-import { bench } from "../../lib";
-input = fs.readFileSync("input.txt", "utf-8");
-
 export function setup(input: string) {
   return input.trim().split("\n").map(Number);
 }
 
 export type Input = ReturnType<typeof setup>;
 
-function mix(input: number, secret: number) {
-  return (input >>> 0) ^ (secret >>> 0);
-}
-
-function unsignedmod(input: number, mod: number) {
-  return ((input % mod) + mod) % mod;
-}
-
-function prune(input: number) {
-  return unsignedmod(input, 16777216);
-}
-
 function forward(secret: number) {
-  let result = secret;
-  result = prune(mix(result, result * 64));
-  result = prune(mix(result, Math.floor(result / 32)));
-  result = prune(mix(result, result * 2048));
+  let result = secret >>> 0;
+  result = (result ^ (result << 6)) & 0xffffff;
+  result = (result ^ Math.floor(result >> 5)) & 0xffffff;
+  result = (result ^ (result << 11)) & 0xffffff;
   return result;
 }
 
@@ -49,21 +25,26 @@ function run(
   return result;
 }
 
-function stats(input: [number, number | undefined][]): [string, number][] {
-  // [pattern, offer][]
-  const stats: [string, number][] = [];
-  const set = new Set<string>();
+const seen = new Uint32Array(111150);
+
+function stats(input: [number, number | undefined][]): [number, number][] {
+  seen.fill(0);
+  const stats: [number, number][] = [];
   for (let i = 4; i < input.length; i++) {
     const [buying, change] = input[i];
     const [, chm1] = input[i - 1]; // change minus 1
     const [, chm2] = input[i - 2];
     const [, chm3] = input[i - 3];
-    const streak = [chm3, chm2, chm1, change].join(",");
-    if (set.has(streak)) {
+    const k0 = change! + 9;
+    const k1 = chm1! + 9;
+    const k2 = chm2! + 9;
+    const k3 = chm3! + 9;
+    const k = k0 + k1 * 18 + k2 * 18 ** 2 + k3 * 18 ** 3;
+    if (seen[k]) {
       continue;
     }
-    set.add(streak);
-    stats.push([streak, buying]);
+    seen[k] = 1;
+    stats.push([k, buying]);
   }
   return stats;
 }
@@ -76,31 +57,22 @@ export function part1(secrets: Input) {
       next = forward(next);
     }
     sum += next;
-    // console.log(next);
   }
   return sum.toString();
 }
 
+const patterns = new Uint32Array(111150);
+
 export function part2(secrets: Input) {
+  patterns.fill(0);
   const allStats = secrets.map((s) => stats(run(s, 2000)));
-  const patterns: Record<string, number> = {};
   for (let i = 0; i < allStats.length; i++) {
     const stats = allStats[i];
     for (const [pattern, offer] of stats) {
-      if (patterns[pattern] === undefined) {
-        patterns[pattern] = 0;
-      }
       patterns[pattern] += offer;
     }
   }
-  const sorted = Object.entries(patterns).sort((a, b) => b[1] - a[1]);
-  const bananas = sorted[0][1].toString();
+  const sorted = patterns.sort((a, b) => b - a);
+  const bananas = sorted[0].toString();
   return bananas.toString();
 }
-
-bench(
-  () => {
-    console.log(part2(setup(input)));
-  },
-  { runs: 10 }
-);

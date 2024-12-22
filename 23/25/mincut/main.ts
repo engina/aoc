@@ -277,5 +277,5 @@ export function part1(mincut: PhysicalMinCut) {
   }
 }
 
-import fs from "fs";
-console.log(part1(setup(fs.readFileSync("../25-input.txt", "utf-8"))));
+// import fs from "fs";
+// console.log(part1(setup(fs.readFileSync("../25-input.txt", "utf-8"))));
