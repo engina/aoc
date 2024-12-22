@@ -74,18 +74,26 @@ export type BenchOpts<F> = {
   progress?: (i: number) => void;
 };
 
-export const bench = <R, F>(
+async function runSequentially<T>(tasks: (() => Promise<T>)[]): Promise<T[]> {
+  const results: T[] = [];
+  for (const task of tasks) {
+    results.push(await task());
+  }
+  return results;
+}
+
+export const bench = async <R, F>(
   fn: (input: F | undefined) => R,
   opts: BenchOpts<F> = {}
 ) => {
   const { label = "Bench", disablePrint = false, setup, progress } = opts;
 
-  function run() {
+  async function run() {
     const setupStart = performance.now();
-    const input = setup?.();
+    const input = await setup?.();
     const setupElapsed = performance.now() - setupStart;
     const start = performance.now();
-    const result = fn(input);
+    const result = await fn(input);
     const elapsed = performance.now() - start;
     return { result, elapsed, setup: setupElapsed };
   }
@@ -102,13 +110,13 @@ export const bench = <R, F>(
 
   let progressCounter = 0;
 
-  const results = range(0, runs)
-    .map(() => {
-      const r = run();
-      progress?.(progressCounter++);
-      return r;
-    })
-    .sort((a, b) => b.elapsed - a.elapsed);
+  const results = [];
+  for (let i = 0; i < runs; i++) {
+    const r = await run();
+    progress?.(progressCounter++);
+    results.push(r);
+  }
+  results.sort((a, b) => b.elapsed - a.elapsed);
 
   process.stdout.write("\b".repeat(runs));
   const max = results[0].elapsed;

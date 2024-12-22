@@ -7,7 +7,7 @@ export type Input = ReturnType<typeof setup>;
 function forward(secret: number) {
   let result = secret >>> 0;
   result = (result ^ (result << 6)) & 0xffffff;
-  result = (result ^ Math.floor(result >> 5)) & 0xffffff;
+  result = (result ^ (result >> 5)) & 0xffffff;
   result = (result ^ (result << 11)) & 0xffffff;
   return result;
 }
@@ -40,6 +40,8 @@ function stats(input: [number, number | undefined][]): [number, number][] {
     const k2 = chm2! + 9;
     const k3 = chm3! + 9;
     const k = k0 + k1 * 18 + k2 * 18 ** 2 + k3 * 18 ** 3;
+    // only include first pattern as our monkey will only buy once
+    // and move to next buyer
     if (seen[k]) {
       continue;
     }
@@ -49,7 +51,7 @@ function stats(input: [number, number | undefined][]): [number, number][] {
   return stats;
 }
 
-export function part1(secrets: Input) {
+export async function part1(secrets: Input) {
   let sum = 0;
   for (const secret of secrets) {
     let next = secret;
@@ -76,3 +78,10 @@ export function part2(secrets: Input) {
   const bananas = sorted[0].toString();
   return bananas.toString();
 }
+
+// import { threads } from "../../lib/threads";
+
+// const t = threads();
+// if (t.isMain) {
+//   t.start();
+// }

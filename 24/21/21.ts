@@ -83,7 +83,7 @@ class Robot {
           let newAlternatives: string[] = [];
           alternatives.forEach((a) => {
             if (vFirst) newAlternatives.push(a + vFirst + "A");
-            if (vFirst !== hFirst) newAlternatives.push(a + hFirst + "A");
+            // if (vFirst !== hFirst) newAlternatives.push(a + hFirst + "A");
           });
           alternatives = newAlternatives;
         }
@@ -98,7 +98,7 @@ class Robot {
       start.add(v);
     }
 
-    console.log(`[${this.name}] type ${code} -> ${alternatives}`);
+    // console.log(`[${this.name}] type ${code} -> ${alternatives}`);
     if (this.controller) {
       const keys = alternatives.map((a) => this.controller!.reverse(a));
       keys.sort((a, b) => a.length - b.length);
@@ -110,7 +110,7 @@ class Robot {
   }
 
   press(key: string): string {
-    console.log(`[${this.name}] press ${key}`);
+    // console.log(`[${this.name}] press ${key}`);
     const gap = this.pad.find(" ")!;
     const current = this.pad.get(this.position)!;
     current.value = colors.bgMagenta(current.value);
@@ -150,7 +150,7 @@ class Robot {
     if (this.position.isEqual(gap.position)) {
       throw new Error(`[${this.name}] fell into gap at ${this.position}`);
     }
-    this.print();
+    // this.print();
     return "";
   }
 
@@ -236,25 +236,6 @@ export function part1(input: Input) {
 
 export function part2(input: Input) {
   const { codes, keypadCode, keypadArm } = input;
-  // const dirRobot1 = new Robot(
-  //   "numeric1".red,
-  //   new Vector2(2, 0),
-  //   keypadArm,
-  //   undefined
-  // );
-  // const dirRobot2 = new Robot(
-  //   "numeric2".green,
-  //   new Vector2(2, 0),
-  //   keypadArm,
-  //   dirRobot1
-  // );
-  // const codeRobot = new Robot(
-  //   "code".blue,
-  //   new Vector2(2, 3),
-  //   keypadCode,
-  //   dirRobot2
-  // );
-  // repeat the above pattern for 25 dir robots
   let prev: Robot | undefined = undefined;
   const dirRobots: Robot[] = Array.from({ length: 25 }, (_, i) => {
     const r = new Robot(
@@ -293,15 +274,15 @@ export function part2(input: Input) {
       simresult = simresult.bgRed;
     }
     reset();
-    console.log("sim result", simresult);
-    console.log(
-      "code",
-      code,
-      p.length,
-      parseInt(code),
-      p.length * parseInt(code),
-      p
-    );
+    // console.log("sim result", simresult);
+    // console.log(
+    //   "code",
+    //   code,
+    //   p.length,
+    //   parseInt(code),
+    //   p.length * parseInt(code),
+    //   p
+    // );
     sum += p.length * parseInt(code);
   }
   return sum.toString();

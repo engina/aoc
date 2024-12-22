@@ -60,7 +60,7 @@ const cmd = new Command()
   .option("-r, --runs <runs>", "Number of runs")
   .option("-s, --show", "Show results", false)
   .option("-v, --verbose", "Verbose output", false)
-  .action((year, day, part, opts) => {
+  .action(async (year, day, part, opts) => {
     let y: number | undefined;
     let d: number | undefined;
     let runs = 10;
@@ -137,14 +137,11 @@ const cmd = new Command()
         if (i !== partSelected && partSelected !== -1) continue;
         const part = parts[i];
         const { name, runner } = part;
-        // const s = bench(() => (setup ? setup(inputStr) : inputStr), {
-        //   disablePrint: true,
-        //   runs: 1,
-        // });
-        const benchResult = bench((i) => runner(i), {
+
+        const benchResult = await bench((i) => runner(i), {
           ...runnerOpts,
           progress: (i) => {
-            // process.stdout.write(".");
+            process.stdout.write(".");
           },
           setup: setup ? () => setup(inputStr, i + 1) : () => inputStr,
         });
