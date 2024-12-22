@@ -1,0 +1,8 @@
+{
+  "imports": {
+    "path": "node:path",
+    "fs": "node:fs",
+    "assert": "node:assert",
+    "readline": "node:readline"
+  }
+}

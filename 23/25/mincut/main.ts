@@ -276,3 +276,6 @@ export function part1(mincut: PhysicalMinCut) {
     return mul.toString();
   }
 }
+
+import fs from "fs";
+console.log(part1(setup(fs.readFileSync("../25-input.txt", "utf-8"))));

@@ -117,7 +117,7 @@ export function part2({ grid, coords }: Input) {
   if (!end) {
     throw new Error("No solution");
   }
-  console.log(coords[end.distance]);
+  // console.log(coords[end.distance]);
 
   let u = end;
   let max = 0;
