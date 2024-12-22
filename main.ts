@@ -65,6 +65,7 @@ const cmd = new Command()
     let d: number | undefined;
     let runs = 10;
     let partSelected = 0;
+
     if (year) {
       y = parseInt(year, 10);
       if (isNaN(y)) {
@@ -78,6 +79,7 @@ const cmd = new Command()
         process.exit(1);
       }
     }
+
     if (day) {
       d = parseInt(day, 10);
       if (isNaN(d) || d < 1 || d > 25) {
@@ -85,6 +87,7 @@ const cmd = new Command()
         process.exit(1);
       }
     }
+
     if (part) {
       partSelected = parseInt(part, 10);
       if (isNaN(partSelected)) {
@@ -93,6 +96,7 @@ const cmd = new Command()
       }
       partSelected -= 1;
     }
+
     if (opts.runs) {
       runs = parseInt(opts.runs, 10);
       if (isNaN(runs)) {
@@ -121,6 +125,7 @@ const cmd = new Command()
       console.log(`No solutions found for ${year}${day ? `/${day}` : ""}`);
       process.exit(1);
     }
+
     const started = performance.now();
     const avgs: number[] = [];
     for (const d of daysFiltered) {
@@ -133,8 +138,10 @@ const cmd = new Command()
       );
       const inputStr = fs.readFileSync(input, "utf-8");
       console.log(`📅 ${year}/${day}, ${name}`.bold);
+
       for (let i = 0; i < parts.length; i++) {
         if (i !== partSelected && partSelected !== -1) continue;
+
         const part = parts[i];
         const { name, runner } = part;
 
@@ -145,7 +152,9 @@ const cmd = new Command()
           },
           setup: setup ? () => setup(inputStr, i + 1) : () => inputStr,
         });
+
         process.stdout.write("\b".repeat(runs));
+
         let result = `Part ${name ?? i + 1}`;
 
         const assertAllSame = benchResult.results.every(
