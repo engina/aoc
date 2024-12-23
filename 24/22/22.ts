@@ -1,3 +1,6 @@
+import { bench } from "../../lib";
+import { threads } from "../../lib/threads";
+
 export function setup(input: string) {
   return input.trim().split("\n").map(Number);
 }
@@ -30,6 +33,7 @@ const seen = new Uint32Array(111150);
 function stats(input: [number, number | undefined][]): [number, number][] {
   seen.fill(0);
   const stats: [number, number][] = [];
+
   for (let i = 4; i < input.length; i++) {
     const [buying, change] = input[i];
     const [, chm1] = input[i - 1]; // change minus 1
@@ -65,9 +69,16 @@ export async function part1(secrets: Input) {
 
 const patterns = new Uint32Array(111150);
 
-export function part2(secrets: Input) {
+export async function part2(secrets: Input) {
   patterns.fill(0);
-  const allStats = secrets.map((s) => stats(run(s, 2000)));
+  // const sharedBuffer = new SharedArrayBuffer(
+  //   Uint32Array.BYTES_PER_ELEMENT * secrets.length
+  // );
+  const allStats = await threads(secrets, (s) => stats(run(s, 2000)), {
+    n: 6,
+  });
+  // console.log("allStats", allStats);
+  // const allStats = secrets.map((s) => stats(run(s, 2000)));
   for (let i = 0; i < allStats.length; i++) {
     const stats = allStats[i];
     for (const [pattern, offer] of stats) {
@@ -79,9 +90,16 @@ export function part2(secrets: Input) {
   return bananas.toString();
 }
 
-// import { threads } from "../../lib/threads";
+import fs from "fs";
+const input = fs.readFileSync("input.txt", "utf-8");
+bench(
+  async () => {
+    const r = await part2(setup(input));
+    console.log(r);
+  },
+  { runs: 1 }
+);
 
-// const t = threads();
-// if (t.isMain) {
-//   t.start();
-// }
+export class SharedView {
+  constructor(public buffer: SharedArrayBuffer) {}
+}
