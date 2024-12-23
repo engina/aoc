@@ -25,6 +25,7 @@ import aoc2418 from "./24/18";
 import aoc2419 from "./24/19";
 import aoc2420 from "./24/20";
 import aoc2422 from "./24/22";
+import aoc2423 from "./24/23";
 
 const days: Day<any>[] = [
   aoc2325,
@@ -47,6 +48,7 @@ const days: Day<any>[] = [
   aoc2419,
   aoc2420,
   aoc2422,
+  aoc2423,
 ];
 
 const cmd = new Command()

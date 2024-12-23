@@ -1,5 +1,7 @@
 import { bench } from "../../lib";
-import { threads } from "../../lib/threads";
+import { threads, init } from "../../lib/threads";
+
+// init();
 
 export function setup(input: string) {
   return input.trim().split("\n").map(Number);
@@ -74,11 +76,11 @@ export async function part2(secrets: Input) {
   // const sharedBuffer = new SharedArrayBuffer(
   //   Uint32Array.BYTES_PER_ELEMENT * secrets.length
   // );
-  const allStats = await threads(secrets, (s) => stats(run(s, 2000)), {
-    n: 6,
-  });
+  // const allStats = await threads(secrets, (s) => stats(run(s, 2000)), {
+  //   n: 4,
+  // });
   // console.log("allStats", allStats);
-  // const allStats = secrets.map((s) => stats(run(s, 2000)));
+  const allStats = secrets.map((s) => stats(run(s, 2000)));
   for (let i = 0; i < allStats.length; i++) {
     const stats = allStats[i];
     for (const [pattern, offer] of stats) {
@@ -90,16 +92,16 @@ export async function part2(secrets: Input) {
   return bananas.toString();
 }
 
-import fs from "fs";
-const input = fs.readFileSync("input.txt", "utf-8");
-bench(
-  async () => {
-    const r = await part2(setup(input));
-    console.log(r);
-  },
-  { runs: 1 }
-);
+// import fs from "fs";
+// const input = fs.readFileSync("input.txt", "utf-8");
+// bench(
+//   async () => {
+//     const r = await part2(setup(input));
+//     console.log(r);
+//   },
+//   { runs: 1 }
+// );
 
-export class SharedView {
-  constructor(public buffer: SharedArrayBuffer) {}
-}
+// export class SharedView {
+//   constructor(secrets: number[]) {}
+// }

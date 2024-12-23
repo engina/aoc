@@ -68,52 +68,57 @@ type ThreadMessageResponse<R> = ThreadMessageBase & {
 
 const workers: Worker[] = [];
 
-export function init(srcPath: string, n: number) {
-  if (isMainThread) {
-    console.log("Main thread");
-    const compStart = performance.now();
-    const esb = esbuild.buildSync({
-      entryPoints: [srcPath],
-      bundle: true,
-      platform: "node",
-      format: "cjs",
-      external: ["esbuild"],
-      write: false,
-      logLevel: "debug",
-      minify: true,
-    });
-    const compElapsed = performance.now() - compStart;
-    const outfile = esb.outputFiles[0].text;
-    console.log("compiled in", compElapsed);
-
-    log("Creating", n, "worker threads");
-    for (let i = 0; i < n; i++) {
-      // console.log("Creating worker thread", i);
-      const worker = new Worker(outfile, {
-        eval: true,
-      });
-      worker.on("message", (msg: ThreadMessageResponse<R>) => {
-        // console.log("Message from worker thread:".red, msg);
-        // for (let j = msg.start; j < msg.start + msg.len; j++) {
-        //   results[j] = msg.results[j - msg.start];
-        // }
-        // completed += 1;
-        // if (completed === n) {
-        //   log("all responses received");
-        //   resolve(results);
-        //   workers.forEach((w) => w.terminate());
-        // }
-      });
-      workers.push(worker);
-      // const request = {
-      //   start: i * batchSize,
-      //   len: Math.max(Math.min(batchSize, args.length - i * batchSize), 0),
-      //   args: args.slice(i * batchSize, (i + 1) * batchSize),
-      // } as ThreadMessageRequest<T>;
-      // worker.postMessage(request);
-    }
-    log(`created ${workers.length} threads and sent requests`);
+export function init(
+  n: number = cpus().length,
+  srcPath: string = getCallerFile()
+) {
+  log("init", n, srcPath);
+  if (!isMainThread) {
+    throw new Error("init must be called from main thread");
   }
+
+  const compStart = performance.now();
+  const esb = esbuild.buildSync({
+    entryPoints: [srcPath],
+    bundle: true,
+    platform: "node",
+    format: "cjs",
+    external: ["esbuild"],
+    write: false,
+    logLevel: "debug",
+    minify: true,
+  });
+  const compElapsed = performance.now() - compStart;
+  const outfile = esb.outputFiles[0].text;
+  console.log("compiled in", compElapsed);
+
+  log("Creating", n, "worker threads");
+  for (let i = 0; i < n; i++) {
+    // console.log("Creating worker thread", i);
+    const worker = new Worker(outfile, {
+      eval: true,
+    });
+    worker.on("message", (msg: ThreadMessageResponse<R>) => {
+      // console.log("Message from worker thread:".red, msg);
+      // for (let j = msg.start; j < msg.start + msg.len; j++) {
+      //   results[j] = msg.results[j - msg.start];
+      // }
+      // completed += 1;
+      // if (completed === n) {
+      //   log("all responses received");
+      //   resolve(results);
+      //   workers.forEach((w) => w.terminate());
+      // }
+    });
+    workers.push(worker);
+    // const request = {
+    //   start: i * batchSize,
+    //   len: Math.max(Math.min(batchSize, args.length - i * batchSize), 0),
+    //   args: args.slice(i * batchSize, (i + 1) * batchSize),
+    // } as ThreadMessageRequest<T>;
+    // worker.postMessage(request);
+  }
+  log(`created ${workers.length} threads`);
 }
 
 export function cleanup() {
