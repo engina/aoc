@@ -1,5 +1,5 @@
 import { bench } from "../../lib";
-import { threads, init } from "../../lib/threads";
+import { threads, init, threads2 } from "../../lib/threads";
 
 // init();
 
@@ -76,10 +76,7 @@ export async function part2(secrets: Input) {
   // const sharedBuffer = new SharedArrayBuffer(
   //   Uint32Array.BYTES_PER_ELEMENT * secrets.length
   // );
-  // const allStats = await threads(secrets, (s) => stats(run(s, 2000)), {
-  //   n: 4,
-  // });
-  // console.log("allStats", allStats);
+  // const allStats = await threads(secrets, (s) => stats(run(s, 2000)));
   const allStats = secrets.map((s) => stats(run(s, 2000)));
   for (let i = 0; i < allStats.length; i++) {
     const stats = allStats[i];
@@ -92,16 +89,86 @@ export async function part2(secrets: Input) {
   return bananas.toString();
 }
 
-// import fs from "fs";
-// const input = fs.readFileSync("input.txt", "utf-8");
-// bench(
-//   async () => {
-//     const r = await part2(setup(input));
-//     console.log(r);
-//   },
-//   { runs: 1 }
-// );
+import fs from "fs";
 
+async function main() {
+  const input = fs.readFileSync("input.txt", "utf-8");
+  function isPrime(num: number): boolean {
+    if (num <= 1) return false;
+    if (num <= 3) return true;
+    if (num % 2 === 0 || num % 3 === 0) return false;
+    for (let i = 5; i * i <= num; i += 6) {
+      if (num % i === 0 || num % (i + 2) === 0) return false;
+    }
+    return true;
+  }
+  function findPrimes(fromto: [number, number]): number[] {
+    const [from, to] = fromto;
+    const primes: number[] = [];
+    for (let i = from; i <= to; i++) {
+      if (isPrime(i)) {
+        primes.push(i);
+      }
+    }
+    return primes;
+  }
+  const limits = [
+    [2, 1000000],
+    [10000001, 20000000],
+    [20000001, 30000000],
+    [30000001, 40000000],
+    [40000001, 50000000],
+    [50000001, 60000000],
+    [60000001, 70000000],
+    [70000001, 80000000],
+    [80000001, 90000000],
+    [90000001, 10000000],
+  ] as [number, number][];
+  await bench(
+    async () => {
+      const results = await threads(limits, findPrimes);
+      console.log("Prime numbers calculated by threads:", results.length);
+    },
+    { runs: 1 }
+  );
+
+  await bench(
+    async () => {
+      const results = await threads(limits, findPrimes);
+      console.log("Prime numbers calculated by threads:", results.length);
+    },
+    { runs: 1 }
+  );
+
+  await bench(
+    async () => {
+      const results = await threads(limits, findPrimes);
+      console.log("Prime numbers calculated by threads:", results.length);
+    },
+    { runs: 1 }
+  );
+
+  await bench(
+    async () => {
+      const results = limits.map(findPrimes);
+      console.log("Prime numbers calculated by main:", results.length);
+    },
+    { runs: 1 }
+  );
+  return;
+  // const r = await init();
+  // if (!r) return;
+  bench(
+    async () => {
+      // const r = await part2(setup(input));
+      // console.log(r);
+      const results = await threads(limits, findPrimes);
+      console.log("Prime numbers calculated by threads:", results.length);
+    },
+    { runs: 1 }
+  );
+}
+// main();
 // export class SharedView {
 //   constructor(secrets: number[]) {}
 // }

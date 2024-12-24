@@ -46,7 +46,7 @@ class Robot {
   }
 
   setTarget(target: Robot) {
-    console.log(`[${this.name}] set target to ${target.name}`);
+    // console.log(`[${this.name}] set target to ${target.name}`);
     this.target = target;
   }
 
@@ -112,8 +112,8 @@ class Robot {
   press(key: string): string {
     // console.log(`[${this.name}] press ${key}`);
     const gap = this.pad.find(" ")!;
-    const current = this.pad.get(this.position)!;
-    current.value = colors.bgMagenta(current.value);
+    // const current = this.pad.get(this.position)!;
+    // current.value = colors.bgMagenta(current.value);
     switch (key) {
       case "^":
         this.position.y--;
@@ -132,7 +132,7 @@ class Robot {
         if (!val) {
           throw new Error(`[${this.name}] out of bounds at ${this.position}`);
         }
-        this.print(colors.bgRed);
+        // this.print(colors.bgRed);
         if (this.target) return this.target.press(val.value);
         else {
           return val.value;
@@ -155,6 +155,7 @@ class Robot {
   }
 
   print(color: colors.Color = colors.bgBlue) {
+    return;
     const buttonUnderArm = this.pad.cells.find((c) =>
       c.position.isEqual(this.position)
     );
@@ -195,18 +196,6 @@ export function part1(input: Input) {
     codeRobot.position.set([2, 3]);
   }
 
-  // let test = "101A";
-  // let test = "000A";
-  // console.log(test, codeRobot.reverse(test));
-  // console.log(
-  //   "back",
-  //   codeRobot
-  //     .reverse(test)
-  //     .split("")
-  //     .map((s) => dirRobot1.press(s))
-  //     .join("")
-  // );
-  // return;
   let sum = 0;
   for (const code of codes) {
     const p = codeRobot.reverse(code);
@@ -220,15 +209,15 @@ export function part1(input: Input) {
       simresult = simresult.bgRed;
     }
     reset();
-    console.log("sim result", simresult);
-    console.log(
-      "code",
-      code,
-      p.length,
-      parseInt(code),
-      p.length * parseInt(code),
-      p
-    );
+    // console.log("sim result", simresult);
+    // console.log(
+    //   "code",
+    //   code,
+    //   p.length,
+    //   parseInt(code),
+    //   p.length * parseInt(code),
+    //   p
+    // );
     sum += p.length * parseInt(code);
   }
   return sum.toString();
@@ -302,9 +291,10 @@ input = fs.readFileSync("input.txt", "utf8");
 
 bench(
   () => {
-    console.log(part2(setup(input)));
+    part2(setup(input));
+    // console.log(part1(setup(input)));
   },
-  { runs: 1 }
+  { runs: 10000 }
 );
 
 /**
