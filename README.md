@@ -4,8 +4,11 @@ Here are some solutions to the Advent of Code challenges that was rotting on my 
 
 I couldn't solve all of them in reasonable amount of time, so I just left them as is. It was a fun month for sure.
 
+It was an experiment to see how fast I can write solutions in TypeScript, so I didn't use any libraries or frameworks.
+
 ```console
 $ npx tsx main.ts
+
 📅 23/25, Snowverload
 Part 1 PASS: ****** (290.15ms 87.41ms)
 
